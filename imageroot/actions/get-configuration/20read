@@ -26,6 +26,7 @@ config["configured"] = True if config["host"] else False
 config["http_port"] = os.getenv("TRAEFIK_HTTP_PORT", "80")
 config["http2https"] = os.getenv("TRAEFIK_HTTP2HTTPS") == "True"
 config["lets_encrypt"] = os.getenv("TRAEFIK_LETS_ENCRYPT") == "True"
+config["sample_apps_enabled"] = os.getenv("SAMPLE_APPS_ENABLED", "False") == "True"
 
 # retrieve LDAP domains list
 lp = Ldapproxy()
