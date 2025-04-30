@@ -14,26 +14,23 @@ data = json.load(sys.stdin)
 
 # Setup default values
 ldap_domain = data.get("ldap_domain", "")
-# bind user to the domain
+# Bind user to the domain
 if ldap_domain:
     agent.bind_user_domains([ldap_domain])
 else:
     agent.bind_user_domains([])
-#if ldap_domain != os.environ.get("LDAP_DOMAIN", ""):
 
 # Setup LDAP domain
 agent.set_env("LDAP_DOMAIN", ldap_domain)
 
 # Setup cross domain authentication
 cda = data.get("cda_status", False)
-if cda:
-    agent.set_env("CDA_STATUS", "True")
-else:
-    agent.set_env("CDA_STATUS", "False")
+agent.set_env("CDA_STATUS", str(cda))
 
 # Setup issuerDBSAMLActivation
-issuer_dbsaml_activation = data.get("saml_status", False)
-if issuer_dbsaml_activation:
-    agent.set_env("SAML_STATUS", "True")
-else:
-    agent.set_env("SAML_STATUS", "False")
+saml = data.get("saml_status", False)
+agent.set_env("SAML_STATUS", str(saml))
+
+# Setup sample apps toggle
+sample_apps_enabled = data.get("sample_apps_enabled", False)
+agent.set_env("SAMPLE_APPS_ENABLED", str(sample_apps_enabled))
