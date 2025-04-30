@@ -95,6 +95,33 @@
             <cv-accordion ref="accordion" class="maxwidth mg-bottom">
               <cv-accordion-item :open="toggleAccordion[0]">
                 <template slot="title">{{ $t("settings.advanced") }}</template>
+               <template>
+  <cv-tile light class="mg-bottom">
+    <label class="bx--label">{{ $t("settings.upload_logo") }}</label>
+    <input
+      type="file"
+      accept="image/*"
+      @change="handleImageUpload"
+      :disabled="loading.uploadLogo"
+    />
+    <p v-if="logoUploadError" class="bx--form-requirement">{{ logoUploadError }}</p>
+    <img
+      v-if="logoPreviewUrl"
+      :src="logoPreviewUrl"
+      alt="Logo preview"
+      style="max-height: 100px; margin-top: 1rem"
+    />
+    <NsButton
+      kind="secondary"
+      :loading="loading.uploadLogo"
+      @click="uploadLogo"
+      :disabled="!logoFile"
+    >
+      {{ $t("settings.upload") }}
+    </NsButton>
+  </cv-tile>
+</template>
+
                 <template slot="content">
                   <NsToggle
                     v-model="saml_status"
