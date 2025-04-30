@@ -9,6 +9,7 @@
         <h2>{{ $t("settings.title") }}</h2>
       </cv-column>
     </cv-row>
+
     <cv-row v-if="error.getConfiguration">
       <cv-column>
         <NsInlineNotification
@@ -19,27 +20,25 @@
         />
       </cv-column>
     </cv-row>
+
     <cv-row>
       <cv-column>
         <cv-tile light>
           <cv-form @submit.prevent="configureModule">
+            <!-- host input -->
             <NsTextInput
               :label="$t('settings.lemonldapng_fqdn')"
               placeholder="lemonldapng.example.org"
               v-model.trim="host"
               class="mg-bottom"
               :invalid-message="$t(error.host)"
-              :disabled="
-                loading.getConfiguration ||
-                loading.configureModule ||
-                configured
-              "
+              :disabled="loading.getConfiguration || loading.configureModule || configured"
               ref="host"
             >
-              <template #tooltip>{{
-                $t("settings.lemonldapng_fqdn_tooltip")
-              }}</template>
+              <template #tooltip>{{ $t("settings.lemonldapng_fqdn_tooltip") }}</template>
             </NsTextInput>
+
+            <!-- toggles -->
             <cv-toggle
               value="letsEncrypt"
               :label="$t('settings.lets_encrypt')"
@@ -47,13 +46,10 @@
               :disabled="loading.getConfiguration || loading.configureModule"
               class="mg-bottom"
             >
-              <template slot="text-left">{{
-                $t("settings.disabled")
-              }}</template>
-              <template slot="text-right">{{
-                $t("settings.enabled")
-              }}</template>
+              <template slot="text-left">{{ $t("settings.disabled") }}</template>
+              <template slot="text-right">{{ $t("settings.enabled") }}</template>
             </cv-toggle>
+
             <cv-toggle
               value="httpToHttps"
               :label="$t('settings.http_to_https')"
@@ -61,13 +57,11 @@
               :disabled="loading.getConfiguration || loading.configureModule"
               class="mg-bottom"
             >
-              <template slot="text-left">{{
-                $t("settings.disabled")
-              }}</template>
-              <template slot="text-right">{{
-                $t("settings.enabled")
-              }}</template>
+              <template slot="text-left">{{ $t("settings.disabled") }}</template>
+              <template slot="text-right">{{ $t("settings.enabled") }}</template>
             </cv-toggle>
+
+            <!-- LDAP combo -->
             <NsComboBox
               v-model.trim="ldap_domain"
               :autoFilter="true"
@@ -86,11 +80,10 @@
               ref="ldap_domain"
             >
               <template slot="tooltip">
-                {{
-                  $t("settings.choose_the_ldap_domain_to_authenticate_users")
-                }}
+                {{ $t("settings.choose_the_ldap_domain_to_authenticate_users") }}
               </template>
             </NsComboBox>
+
             <!-- advanced options -->
             <cv-accordion ref="accordion" class="maxwidth mg-bottom">
               <cv-accordion-item :open="toggleAccordion[0]">
@@ -102,43 +95,49 @@
                     :label="$t('settings.saml_status')"
                     :form-item="true"
                     value="toggleValue"
-                    :disabled="
-                      loading.getConfiguration || loading.configureModule
-                    "
+                    :disabled="loading.getConfiguration || loading.configureModule"
                   >
                     <template slot="tooltip">
                       <span>{{ $t("settings.saml_status_tooltip") }}</span>
                     </template>
-                    <template slot="text-left"
-                      >{{ $t("settings.disabled") }}
-                    </template>
-                    <template slot="text-right"
-                      >{{ $t("settings.enabled") }}
-                    </template>
+                    <template slot="text-left">{{ $t("settings.disabled") }}</template>
+                    <template slot="text-right">{{ $t("settings.enabled") }}</template>
                   </NsToggle>
+
                   <NsToggle
                     v-model="cda_status"
                     ref="cda_status"
                     :label="$t('settings.cda_status')"
                     :form-item="true"
                     value="toggleValue"
-                    :disabled="
-                      loading.getConfiguration || loading.configureModule
-                    "
+                    :disabled="loading.getConfiguration || loading.configureModule"
                   >
                     <template slot="tooltip">
                       <span>{{ $t("settings.cda_status_tooltip") }}</span>
                     </template>
-                    <template slot="text-left"
-                      >{{ $t("settings.disabled") }}
+                    <template slot="text-left">{{ $t("settings.disabled") }}</template>
+                    <template slot="text-right">{{ $t("settings.enabled") }}</template>
+                  </NsToggle>
+
+                  <NsToggle
+                    v-model="sample_apps_enabled"
+                    ref="sample_apps_enabled"
+                    :label="$t('settings.sample_apps_enabled')"
+                    :form-item="true"
+                    value="toggleValue"
+                    :disabled="loading.getConfiguration || loading.configureModule"
+                  >
+                    <template slot="tooltip">
+                      <span>{{ $t("settings.sample_apps_enabled_tooltip") }}</span>
                     </template>
-                    <template slot="text-right"
-                      >{{ $t("settings.enabled") }}
-                    </template>
+                    <template slot="text-left">{{ $t("settings.disabled") }}</template>
+                    <template slot="text-right">{{ $t("settings.enabled") }}</template>
                   </NsToggle>
                 </template>
               </cv-accordion-item>
             </cv-accordion>
+
+            <!-- errors -->
             <cv-row v-if="error.configureModule">
               <cv-column>
                 <NsInlineNotification
@@ -149,13 +148,16 @@
                 />
               </cv-column>
             </cv-row>
+
+            <!-- submit -->
             <NsButton
               kind="primary"
               :icon="Save20"
               :loading="loading.configureModule"
               :disabled="loading.getConfiguration || loading.configureModule"
-              >{{ $t("settings.save") }}</NsButton
             >
+              {{ $t("settings.save") }}
+            </NsButton>
           </cv-form>
         </cv-tile>
       </cv-column>
@@ -176,238 +178,9 @@ import {
 
 export default {
   name: "Settings",
-  mixins: [
-    TaskService,
-    IconService,
-    UtilService,
-    QueryParamService,
-    PageTitleService,
-  ],
+  mixins: [TaskService, IconService, UtilService, QueryParamService, PageTitleService],
   pageTitle() {
     return this.$t("settings.title") + " - " + this.appName;
   },
   data() {
     return {
-      q: {
-        page: "settings",
-      },
-      saml_status: false,
-      cda_status: false,
-      urlCheckInterval: null,
-      host: "",
-      configured: false,
-      isLetsEncryptEnabled: false,
-      isHttpToHttpsEnabled: true,
-      ldap_domain: "",
-      ldap_domain_list: [],
-      loading: {
-        getConfiguration: false,
-        configureModule: false,
-      },
-      error: {
-        getConfiguration: "",
-        configureModule: "",
-        host: "",
-        lets_encrypt: "",
-        http2https: "",
-      },
-    };
-  },
-  computed: {
-    ...mapState(["instanceName", "core", "appName"]),
-  },
-  created() {
-    this.getConfiguration();
-  },
-  beforeRouteEnter(to, from, next) {
-    next((vm) => {
-      vm.watchQueryData(vm);
-      vm.urlCheckInterval = vm.initUrlBindingForApp(vm, vm.q.page);
-    });
-  },
-  beforeRouteLeave(to, from, next) {
-    clearInterval(this.urlCheckInterval);
-    next();
-  },
-  methods: {
-    async getConfiguration() {
-      this.loading.getConfiguration = true;
-      this.error.getConfiguration = "";
-      const taskAction = "get-configuration";
-      const eventId = this.getUuid();
-
-      // register to task error
-      this.core.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.getConfigurationAborted
-      );
-
-      // register to task completion
-      this.core.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.getConfigurationCompleted
-      );
-
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          extra: {
-            title: this.$t("action." + taskAction),
-            isNotificationHidden: true,
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.error.getConfiguration = this.getErrorMessage(err);
-        this.loading.getConfiguration = false;
-        return;
-      }
-    },
-    getConfigurationAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.error.getConfiguration = this.$t("error.generic_error");
-      this.loading.getConfiguration = false;
-    },
-    getConfigurationCompleted(taskContext, taskResult) {
-      const config = taskResult.output;
-      this.host = config.host;
-      this.isLetsEncryptEnabled = config.lets_encrypt;
-      this.isHttpToHttpsEnabled = config.http2https;
-      this.configured = config.configured;
-      this.saml_status = config.saml_status;
-      this.cda_status = config.cda_status;
-      // force to reload value after dom update
-      this.$nextTick(() => {
-        this.ldap_domain = config.ldap_domain;
-        if (this.ldap_domain == "") {
-          this.ldap_domain = "-";
-        }
-      });
-      this.ldap_domain_list = config.ldap_domain_list;
-      this.loading.getConfiguration = false;
-      this.focusElement("host");
-    },
-    validateConfigureModule() {
-      this.clearErrors(this);
-
-      let isValidationOk = true;
-      if (!this.host) {
-        this.error.host = "common.required";
-
-        if (isValidationOk) {
-          this.focusElement("host");
-        }
-        isValidationOk = false;
-      }
-      if (!this.ldap_domain) {
-        this.error.ldap_domain = "common.required";
-
-        if (isValidationOk) {
-          this.focusElement("ldap_domain");
-        }
-        isValidationOk = false;
-      }
-      return isValidationOk;
-    },
-    configureModuleValidationFailed(validationErrors) {
-      this.loading.configureModule = false;
-      let focusAlreadySet = false;
-
-      for (const validationError of validationErrors) {
-        const param = validationError.parameter;
-        // set i18n error message
-        this.error[param] = this.$t("settings." + validationError.error);
-
-        if (!focusAlreadySet) {
-          this.focusElement(param);
-          focusAlreadySet = true;
-        }
-      }
-    },
-    async configureModule() {
-      this.error.test_imap = false;
-      this.error.test_smtp = false;
-      const isValidationOk = this.validateConfigureModule();
-      if (!isValidationOk) {
-        return;
-      }
-
-      this.loading.configureModule = true;
-      const taskAction = "configure-module";
-      const eventId = this.getUuid();
-
-      // register to task error
-      this.core.$root.$once(
-        `${taskAction}-aborted-${eventId}`,
-        this.configureModuleAborted
-      );
-
-      // register to task validation
-      this.core.$root.$once(
-        `${taskAction}-validation-failed-${eventId}`,
-        this.configureModuleValidationFailed
-      );
-
-      // register to task completion
-      this.core.$root.$once(
-        `${taskAction}-completed-${eventId}`,
-        this.configureModuleCompleted
-      );
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data: {
-            host: this.host,
-            lets_encrypt: this.isLetsEncryptEnabled,
-            http2https: this.isHttpToHttpsEnabled,
-            ldap_domain: this.ldap_domain == "-" ? "" : this.ldap_domain,
-            saml_status: this.saml_status,
-            cda_status: this.cda_status,
-          },
-          extra: {
-            title: this.$t("settings.instance_configuration", {
-              instance: this.instanceName,
-            }),
-            description: this.$t("settings.configuring"),
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
-
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.error.configureModule = this.getErrorMessage(err);
-        this.loading.configureModule = false;
-        return;
-      }
-    },
-    configureModuleAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.error.configureModule = this.$t("error.generic_error");
-      this.loading.configureModule = false;
-    },
-    configureModuleCompleted() {
-      this.loading.configureModule = false;
-
-      // reload configuration
-      this.getConfiguration();
-    },
-  },
-};
-</script>
-
-<style scoped lang="scss">
-@import "../styles/carbon-utils";
-.mg-bottom {
-  margin-bottom: $spacing-06;
-}
-
-.maxwidth {
-  max-width: 38rem;
-}
-</style>
