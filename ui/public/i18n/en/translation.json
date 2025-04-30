@@ -47,7 +47,9 @@
     "saml_status_tooltip": "SAML (Security Assertion Markup Language) is a protocol that allows users to authenticate once and access multiple services through Single Sign-On (SSO). It enables identity federation by exchanging authentication and authorization data between an identity provider (IdP) and service providers (SPs) using XML-based messages.",
     "cda_status": "CDA status",
     "cda_status_tooltip": "CDA (Cross Domain Authentication) is a mechanism that allows Single Sign-On (SSO) across different domains. It works by securely sharing authentication information between portals using redirection and encrypted tokens, enabling seamless access across multiple web domains.",
-    "ldap_domain_format": "Must be a valid LDAP domain name"
+    "ldap_domain_format": "Must be a valid LDAP domain name",
+    "sample_apps_enabled": "Sample apps enabled",
+    "sample_apps_enabled_tooltip": "Enables or disables the sample applications in the system"
   },
   "about": {
     "title": "About"
