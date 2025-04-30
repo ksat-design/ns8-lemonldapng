@@ -11,7 +11,8 @@
             "ldap_domain": "domain.org",
             "configured": true,
             "cda_status": true,
-            "saml_status": true
+            "saml_status": true,
+            "sample_apps_enabled": true
         }
     ],
     "type": "object",
@@ -22,7 +23,8 @@
         "ldap_domain",
         "configured",
         "cda_status",
-        "saml_status"
+        "saml_status",
+        "sample_apps_enabled"
     ],
     "properties": {
         "host": {
@@ -59,6 +61,11 @@
             "type": "boolean",
             "title": "IssuerDB SAML Activation",
             "description": "True if the application is configured to use IssuerDB SAML"
+        },
+        "sample_apps_enabled": {
+            "type": "boolean",
+            "title": "Sample Apps Enabled",
+            "description": "True if sample apps are enabled"
         }
     }
 }
