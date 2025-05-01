@@ -14,9 +14,11 @@ data = json.load(sys.stdin)
 
 # Setup default values
 ldap_domain = data.get("ldap_domain", "")
-
 # Bind user to the domain
-agent.bind_user_domains([ldap_domain] if ldap_domain else [])
+if ldap_domain:
+    agent.bind_user_domains([ldap_domain])
+else:
+    agent.bind_user_domains([])
 
 # Setup LDAP domain
 agent.set_env("LDAP_DOMAIN", ldap_domain)
@@ -26,9 +28,9 @@ cda = data.get("cda_status", False)
 agent.set_env("CDA_STATUS", "True" if cda else "False")
 
 # Setup issuerDBSAMLActivation
-saml = data.get("saml_status", False)
-agent.set_env("SAML_STATUS", "True" if saml else "False")
+issuer_dbsaml_activation = data.get("saml_status", False)
+agent.set_env("SAML_STATUS", "True" if issuer_dbsaml_activation else "False")
 
-# Setup sample apps visibility
-sample_apps = data.get("sample_apps_enabled", False)
-agent.set_env("SAMPLE_APPS_ENABLED", "True" if sample_apps else "False")
+# Setup sample apps status
+sample_apps_status = data.get("sample_apps_status", False)
+agent.set_env("SAMPLE_APPS_STATUS", "True" if sample_apps_status else "False")
