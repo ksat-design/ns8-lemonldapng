@@ -1,71 +1,70 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Get lemonldapng settings",
-  "$id": "http://nethserver.org/json-schema/task/input/lemonldapng/get-configuration",
-  "description": "Get lemonldapng settings",
-  "examples": [
-    {
-      "host": "lemonldapng.domain.org",
-      "http2https": true,
-      "lets_encrypt": true,
-      "ldap_domain": "domain.org",
-      "configured": true,
-      "cda_status": true,
-      "saml_status": true,
-      "sample_apps_enabled": false
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Get lemonldapng settings",
+    "$id": "http://nethserver.org/json-schema/task/input/lemonldapng/get-configuration",
+    "description": "Get lemonldapng settings",
+    "examples": [
+        {
+            "host": "lemonldapng.domain.org",
+            "http2https": true,
+            "lets_encrypt": true,
+            "ldap_domain": "domain.org",
+            "configured": true,
+            "cda_status": true,
+            "saml_status": true
+        }
+    ],
+    "type": "object",
+    "required": [
+        "host",
+        "http2https",
+        "lets_encrypt",
+        "ldap_domain",
+        "configured",
+        "cda_status",
+        "saml_status",
+        "sample_apps_status"
+    ],
+    "properties": {
+        "host": {
+            "type": "string",
+            "description": "Host name for the application, like 'lemonldapng.domain.org'",
+            "format": "idn-hostname"
+        },
+        "lets_encrypt": {
+            "type": "boolean",
+            "title": "Let's Encrypt certificate",
+            "description": "Request a valid Let's Encrypt certificate."
+        },
+        "http2https": {
+            "type": "boolean",
+            "title": "HTTP to HTTPS redirection",
+            "description": "Redirect all the HTTP requests to HTTPS"
+        },
+        "ldap_domain": {
+            "type": "string",
+            "title": "LDAP domain",
+            "description": "Choose the LDAP domain to authenticate users"
+        },
+        "configured": {
+            "type": "boolean",
+            "title": "Configured",
+            "description": "True if the application is already configured"
+        },
+        "cda_status": {
+            "type": "boolean",
+            "title": "CDA",
+            "description": "True if the application is configured to use CDA"
+        },
+        "saml_status": {
+            "type": "boolean",
+            "title": "IssuerDB SAML Activation",
+            "description": "True if the application is configured to use IssuerDB SAML"
+        },
+        "sample_apps_status": {
+            "type": "boolean",
+            "title": "Sample Apps",
+            "description": "True if the sample apps are enabled"
+        }        
     }
-  ],
-  "type": "object",
-  "required": [
-    "host",
-    "http2https",
-    "lets_encrypt",
-    "ldap_domain",
-    "configured",
-    "cda_status",
-    "saml_status",
-    "sample_apps_enabled"
-  ],
-  "properties": {
-    "host": {
-      "type": "string",
-      "description": "Host name for the application, like 'lemonldapng.domain.org'",
-      "format": "idn-hostname"
-    },
-    "lets_encrypt": {
-      "type": "boolean",
-      "title": "Let's Encrypt certificate",
-      "description": "Request a valid Let's Encrypt certificate."
-    },
-    "http2https": {
-      "type": "boolean",
-      "title": "HTTP to HTTPS redirection",
-      "description": "Redirect all the HTTP requests to HTTPS"
-    },
-    "ldap_domain": {
-      "type": "string",
-      "title": "LDAP domain",
-      "description": "Choose the LDAP domain to authenticate users"
-    },
-    "configured": {
-      "type": "boolean",
-      "title": "Configured",
-      "description": "True if the application is already configured"
-    },
-    "cda_status": {
-      "type": "boolean",
-      "title": "CDA",
-      "description": "True if the application is configured to use CDA"
-    },
-    "saml_status": {
-      "type": "boolean",
-      "title": "IssuerDB SAML Activation",
-      "description": "True if the application is configured to use IssuerDB SAML"
-    },
-    "sample_apps_enabled": {
-      "type": "boolean",
-      "title": "Sample apps",
-      "description": "Sample apps are for education purposes"
-    }
-  }
 }
