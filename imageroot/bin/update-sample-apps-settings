@@ -1,75 +1,67 @@
 #!/usr/bin/env python3
-
 #
 # Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
 import os
-import subprocess
 import sys
+import subprocess
 
-# Check whether sample apps should be enabled
-apps_enabled = os.getenv("SAMPLE_APPS_ENABLED", "False") == "True"
-
-def get_domain():
-    """Fetch the configured domain from LemonLDAP::NG."""
-    result = subprocess.run(
-        [
-            "podman", "exec", "lemonldapng-app",
-            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "domain"
-        ],
-        capture_output=True, text=True, check=True
-    )
-    return result.stdout.strip().replace("domain = ", "")
-
-if apps_enabled:
-    print("Sample apps are enabled. Creating entries...", file=sys.stderr)
-    domain = get_domain()
-    
-    # Create category
-    subprocess.run([
+def add_sample_apps(lemdomain):
+    """Add 'Sample applications' category with Test 1 and Test 2."""
+    command = [
         "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "set",
-        "applicationList/1sample/type", "category",
-        "applicationList/1sample/catname", "Sample applications"
-    ], check=True)
-    
-    # Create test1 application
-    subprocess.run([
-        "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "set",
-        "applicationList/1sample/test1/type", "application",
-        "applicationList/1sample/test1/options/name", "Application Test 1",
-        "applicationList/1sample/test1/options/description", "A simple application displaying authenticated user",
-        "applicationList/1sample/test1/options/display", "auto",
-        "applicationList/1sample/test1/options/logo", "demo.png",
-        "applicationList/1sample/test1/options/uri", f"http://test1.{domain}"
-    ], check=True)
-    
-    # Create test2 application
-    subprocess.run([
-        "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "set",
-        "applicationList/1sample/test2/type", "application",
-        "applicationList/1sample/test2/options/name", "Application Test 2",
-        "applicationList/1sample/test2/options/description", "The same simple application displaying authenticated user",
-        "applicationList/1sample/test2/options/display", "auto",
-        "applicationList/1sample/test2/options/logo", "thumbnail.png",
-        "applicationList/1sample/test2/options/uri", f"http://test2.{domain}/"
-    ], check=True)
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "addKey",
+        "applicationList/applications1", "type", "category",
+        "applicationList/applications1", "catname", "Sample applications",
 
-else:
-    print("Sample apps are disabled. Removing entries...", file=sys.stderr)
-    keys_to_delete = [
-        "applicationList/1sample/test1",
-        "applicationList/1sample/test2",
-        "applicationList/1sample/make",
-        "applicationList/1sample"  # This removes the entire category
+        "applicationList/applications1/sample", "type", "application",
+        "applicationList/applications1/sample/options", "description", "A sample application",
+        "applicationList/applications1/sample/options", "display", "on",
+        "applicationList/applications1/sample/options", "logo", "demo.png",
+        "applicationList/applications1/sample/options", "name", "Test 1",
+        "applicationList/applications1/sample/options", "uri", f"https://test1.{lemdomain}/",
+
+        "applicationList/applications1/sample2", "type", "application",
+        "applicationList/applications1/sample2/options", "description", "A sample application",
+        "applicationList/applications1/sample2/options", "display", "on",
+        "applicationList/applications1/sample2/options", "logo", "demo.png",
+        "applicationList/applications1/sample2/options", "name", "Test 2",
+        "applicationList/applications1/sample2/options", "uri", f"https://test2.{lemdomain}/"
     ]
-    for key in keys_to_delete:
-        command = [
-            "podman", "exec", "lemonldapng-app",
-            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "delKey", key
-        ]
+
+    try:
         subprocess.run(command, check=True)
+        print("Sample applications added successfully.", file=sys.stderr)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to add sample applications: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def remove_sample_apps():
+    """Remove 'Sample applications' category and its apps."""
+    command = [
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "delKey",
+        "applicationList/applications1", "sample",
+        "applicationList/applications1", "sample2",
+        "applicationList", "applications1"
+    ]
+
+    try:
+        subprocess.run(command, check=True)
+        print("Sample applications removed successfully.", file=sys.stderr)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to remove sample applications: {e}", file=sys.stderr)
+        sys.exit(1)
+
+# Environment variable check
+sample_apps_enabled = os.getenv("SAMPLE_APPS_ENABLED", "False") == "True"
+lemdomain = os.getenv("LEM_DOMAIN", "example.com")
+
+if sample_apps_enabled:
+    print("Sample applications enabled, adding...", file=sys.stderr)
+    add_sample_apps(lemdomain)
+else:
+    print("Sample applications disabled, removing...", file=sys.stderr)
+    remove_sample_apps()
