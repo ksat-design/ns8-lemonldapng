@@ -11,7 +11,7 @@
       "ldap_domain": "domain.org",
       "cda_status": true,
       "saml_status": true,
-      "sample_apps_enabled": false
+      "sample_apps_status": false
     }
   ],
   "type": "object",
@@ -57,10 +57,10 @@
       "title": "SAML",
       "description": "True if the application is configured to use SAML"
     },
-    "sample_apps_enabled": {
+    "sample_apps_status": {
       "type": "boolean",
-      "title": "Sample apps",
-      "description": "Sample apps are for education purposes"
+      "title": "Sample apps status",
+      "description": "True if sample applications should be enabled"
     }
   }
 }
