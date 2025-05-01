@@ -7,7 +7,8 @@
 
 import subprocess
 
-command = [
+# Set configuration options
+set_command = [
     "podman", "exec", "lemonldapng-app",
     "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "set",
     "portalMainLogo", "CustomTheme/nethserver.png",
@@ -17,4 +18,15 @@ command = [
     "portalDisplayRegister", "0"
 ]
 
-subprocess.run(command, check=True)
+# Delete specific application keys
+del_command = [
+    "podman", "exec", "lemonldapng-app",
+    "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "delKey",
+    "applicationList/applications1/", "sample1",
+    "applicationList/applications1/", "sample2",
+    "applicationList", "applications1"
+]
+
+# Execute both commands
+subprocess.run(set_command, check=True)
+subprocess.run(del_command, check=True)
