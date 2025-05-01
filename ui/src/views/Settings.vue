@@ -29,10 +29,16 @@
               v-model.trim="host"
               class="mg-bottom"
               :invalid-message="$t(error.host)"
-              :disabled="loading.getConfiguration || loading.configureModule || configured"
+              :disabled="
+                loading.getConfiguration ||
+                loading.configureModule ||
+                configured
+              "
               ref="host"
             >
-              <template #tooltip>{{ $t("settings.lemonldapng_fqdn_tooltip") }}</template>
+              <template #tooltip>{{
+                $t("settings.lemonldapng_fqdn_tooltip")
+              }}</template>
             </NsTextInput>
             <cv-toggle
               value="letsEncrypt"
@@ -41,8 +47,12 @@
               :disabled="loading.getConfiguration || loading.configureModule"
               class="mg-bottom"
             >
-              <template slot="text-left">{{ $t("settings.disabled") }}</template>
-              <template slot="text-right">{{ $t("settings.enabled") }}</template>
+              <template slot="text-left">{{
+                $t("settings.disabled")
+              }}</template>
+              <template slot="text-right">{{
+                $t("settings.enabled")
+              }}</template>
             </cv-toggle>
             <cv-toggle
               value="httpToHttps"
@@ -51,8 +61,12 @@
               :disabled="loading.getConfiguration || loading.configureModule"
               class="mg-bottom"
             >
-              <template slot="text-left">{{ $t("settings.disabled") }}</template>
-              <template slot="text-right">{{ $t("settings.enabled") }}</template>
+              <template slot="text-left">{{
+                $t("settings.disabled")
+              }}</template>
+              <template slot="text-right">{{
+                $t("settings.enabled")
+              }}</template>
             </cv-toggle>
             <NsComboBox
               v-model.trim="ldap_domain"
@@ -71,7 +85,11 @@
               class="mg-bottom"
               ref="ldap_domain"
             >
-              <template slot="tooltip">{{ $t("settings.choose_the_ldap_domain_to_authenticate_users") }}</template>
+              <template slot="tooltip">
+                {{
+                  $t("settings.choose_the_ldap_domain_to_authenticate_users")
+                }}
+              </template>
             </NsComboBox>
             <!-- advanced options -->
             <cv-accordion ref="accordion" class="maxwidth mg-bottom">
@@ -79,33 +97,24 @@
                 <template slot="title">{{ $t("settings.advanced") }}</template>
                 <template slot="content">
                   <NsToggle
-                    v-model="sample_apps_enabled"
-                    ref="sample_apps_enabled"
-                    :label="$t('settings.sample_apps_enabled')"
-                    :form-item="true"
-                    value="toggleValue"
-                    :disabled="loading.getConfiguration || loading.configureModule"
-                  >
-                    <template slot="tooltip">
-                      <span>{{ $t("settings.sample_apps_enabled_tooltip") }}</span>
-                    </template>
-                    <template slot="text-left">{{ $t("settings.disabled") }}</template>
-                    <template slot="text-right">{{ $t("settings.enabled") }}</template>
-                  </NsToggle>
-
-                  <NsToggle
                     v-model="saml_status"
                     ref="saml_status"
                     :label="$t('settings.saml_status')"
                     :form-item="true"
                     value="toggleValue"
-                    :disabled="loading.getConfiguration || loading.configureModule"
+                    :disabled="
+                      loading.getConfiguration || loading.configureModule
+                    "
                   >
                     <template slot="tooltip">
                       <span>{{ $t("settings.saml_status_tooltip") }}</span>
                     </template>
-                    <template slot="text-left">{{ $t("settings.disabled") }}</template>
-                    <template slot="text-right">{{ $t("settings.enabled") }}</template>
+                    <template slot="text-left"
+                      >{{ $t("settings.disabled") }}
+                    </template>
+                    <template slot="text-right"
+                      >{{ $t("settings.enabled") }}
+                    </template>
                   </NsToggle>
                   <NsToggle
                     v-model="cda_status"
@@ -113,13 +122,39 @@
                     :label="$t('settings.cda_status')"
                     :form-item="true"
                     value="toggleValue"
-                    :disabled="loading.getConfiguration || loading.configureModule"
+                    :disabled="
+                      loading.getConfiguration || loading.configureModule
+                    "
                   >
                     <template slot="tooltip">
                       <span>{{ $t("settings.cda_status_tooltip") }}</span>
                     </template>
-                    <template slot="text-left">{{ $t("settings.disabled") }}</template>
-                    <template slot="text-right">{{ $t("settings.enabled") }}</template>
+                    <template slot="text-left"
+                      >{{ $t("settings.disabled") }}
+                    </template>
+                    <template slot="text-right"
+                      >{{ $t("settings.enabled") }}
+                    </template>
+                  </NsToggle>
+                  <NsToggle
+                    v-model="sample_apps_status"
+                    ref="sample_apps_status"
+                    :label="$t('settings.sample_apps_status')"
+                    :form-item="true"
+                    value="toggleValue"
+                    :disabled="
+                      loading.getConfiguration || loading.configureModule
+                    "
+                  >
+                    <template slot="tooltip">
+                      <span>{{ $t("settings.sample_apps_status_tooltip") }}</span>
+                    </template>
+                    <template slot="text-left"
+                      >{{ $t("settings.disabled") }}
+                    </template>
+                    <template slot="text-right"
+                      >{{ $t("settings.enabled") }}
+                    </template>
                   </NsToggle>
                 </template>
               </cv-accordion-item>
@@ -178,7 +213,7 @@ export default {
       },
       saml_status: false,
       cda_status: false,
-      sample_apps_enabled: false,
+      sample_apps_status: false,
       urlCheckInterval: null,
       host: "",
       configured: false,
@@ -266,8 +301,6 @@ export default {
       this.configured = config.configured;
       this.saml_status = config.saml_status;
       this.cda_status = config.cda_status;
-      this.sample_apps_enabled = config.sample_apps_enabled; // ✅ Added here
-
       // force to reload value after dom update
       this.$nextTick(() => {
         this.ldap_domain = config.ldap_domain;
@@ -355,7 +388,6 @@ export default {
             ldap_domain: this.ldap_domain == "-" ? "" : this.ldap_domain,
             saml_status: this.saml_status,
             cda_status: this.cda_status,
-            sample_apps_enabled: this.sample_apps_enabled,
           },
           extra: {
             title: this.$t("settings.instance_configuration", {
@@ -380,12 +412,23 @@ export default {
       this.error.configureModule = this.$t("error.generic_error");
       this.loading.configureModule = false;
     },
-    configureModuleCompleted(taskContext, taskResult) {
+    configureModuleCompleted() {
       this.loading.configureModule = false;
-      if (taskResult.status === "success") {
-        this.configured = true;
-      }
+
+      // reload configuration
+      this.getConfiguration();
     },
   },
 };
 </script>
+
+<style scoped lang="scss">
+@import "../styles/carbon-utils";
+.mg-bottom {
+  margin-bottom: $spacing-06;
+}
+
+.maxwidth {
+  max-width: 38rem;
+}
+</style>
