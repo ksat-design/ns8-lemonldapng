@@ -17,7 +17,7 @@ WorkingDirectory=%S/state
 Restart=always
 TimeoutStopSec=70
 ExecStartPre=/bin/rm -f %t/lemonldapng-app.pid %t/lemonldapng-app.ctr-id
-ExecStartPre=/bin/bash -c '/bin/mkdir -p ./llng/{theme,template,plugins,register,userdb,auth,captcha,menutab,apps}'
+ExecStartPre=/bin/bash -c '/bin/mkdir -p ./llng/{theme,template,plugins,register,userdb,auth,captcha,menutab,apps,backgrounds}'
 ExecStartPre=-runagent discover-smarthost
 ExecStartPre=/usr/local/bin/runagent discover-ldap
 ExecStart=/usr/bin/podman run --conmon-pidfile %t/lemonldapng-app.pid \
@@ -48,6 +48,7 @@ ExecStart=/usr/bin/podman run --conmon-pidfile %t/lemonldapng-app.pid \
         --volume ./llng/captcha:/usr/share/perl5/Lemonldap/NG/Portal/Captcha/CustomCaptcha:Z \
         --volume ./llng/menutab:/usr/share/perl5/Lemonldap/NG/Portal/MenuTab/CustomMenuTab:Z \
         --volume ./llng/apps:/usr/share/lemonldap-ng/portal/htdocs/static/common/apps:Z \
+        --volume ./llng/backgrounds:/usr/share/lemonldap-ng/portal/htdocs/static/common/backgrounds:Z \
     ${LEMONLDAP_NG_IMAGE}
 ExecStartPost=/usr/local/bin/runagent update-smtp-settings
 ExecStartPost=/usr/local/bin/runagent update-ldap-settings
