@@ -53,6 +53,7 @@ ExecStartPost=/usr/local/bin/runagent update-smtp-settings
 ExecStartPost=/usr/local/bin/runagent update-ldap-settings
 ExecStartPost=/usr/local/bin/runagent update-cda-settings
 ExecStartPost=/usr/local/bin/runagent update-saml-settings
+ExecStartPost=/usr/local/bin/runagent update-sample-apps-settings
 ExecStartPost=/usr/local/bin/runagent set-nethbranding
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/lemonldapng-app.ctr-id -t 10
 ExecReload=/usr/bin/podman kill -s HUP lemonldapng-app
