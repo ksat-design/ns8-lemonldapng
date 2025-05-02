@@ -106,7 +106,7 @@ else:
     try:
         # Run the podman command to check if sample apps are enabled
         status = subprocess.run(
-            "podman exec lemonldapng-app /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 get 'applicationList/applications1/catname' | grep -q 'Sample applications' && echo 'true' || echo 'false'",
+            "podman exec lemonldapng-app /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 get 'applicationList/1sample/catname' | grep -q 'Sample applications' && echo 'true' || echo 'false'",
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
