@@ -5,32 +5,122 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
+#
+# Read configuration
+#
+
 import os
-import json
 import sys
+import json
 import agent
+from agent.ldapproxy import Ldapproxy
+import subprocess
+import time
 
-data = json.load(sys.stdin)
+# Prepare return variable
+config = {}
 
-# Setup default values
-ldap_domain = data.get("ldap_domain", "")
-# bind user to the domain
-if ldap_domain:
-    agent.bind_user_domains([ldap_domain])
+# Read current configuration from the environment file
+config["host"] = os.getenv("TRAEFIK_HOST", "")
+config["configured"] = True if config["host"] else False
+config["http_port"] = os.getenv("TRAEFIK_HTTP_PORT", "80")
+config["http2https"] = os.getenv("TRAEFIK_HTTP2HTTPS") == "True"
+config["lets_encrypt"] = os.getenv("TRAEFIK_LETS_ENCRYPT") == "True"
+config["sample_apps_status"] = os.getenv("SAMPLE_APPS_STATUS", "False") == "True"
+
+# retrieve LDAP domains list
+lp = Ldapproxy()
+domains = []
+for key in lp.get_domains_list():
+    domains.append({
+        "name": key,
+        "label": key,
+        "value": key,
+    })
+
+config['ldap_domain_list'] = domains
+config['ldap_domain'] = os.environ.get("LDAP_DOMAIN", '')
+
+# Check if the lemonldapng service is active
+command = ["systemctl", "is-active", "--user", "lemonldapng"]
+try:
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, check=True)
+    service_status = result.stdout.strip()
+except subprocess.CalledProcessError:
+    service_status = "inactive"
+
+if service_status != "active":
+    # Set default values if the service is not active
+    config['cda_status'] = False
+    config['saml_status'] = False
+    config['sample_apps_status'] = False  # Default to disabled if service is not active
 else:
-    agent.bind_user_domains([])
+    # Wait for the lemonldapng-app command to succeed (timeout: 30 seconds)
+    timeout = 30  # seconds
+    interval = 1  # seconds between retries
+    elapsed_time = 0
 
-# Setup LDAP domain
-agent.set_env("LDAP_DOMAIN", ldap_domain)
+    # Check if lemonldapng-app is running
+    while elapsed_time < timeout:
+        command = ["systemctl", "is-active", "--user", "lemonldapng-app"]
+        try:
+            result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
+            output = result.stdout.strip()
+            if output == 'active':  # If the command succeeds and returns output, break the loop
+                break
+        except subprocess.CalledProcessError:
+            # Print a message to stderr and wait before retrying
+            print("Waiting for lemonldapng-app to become available...", file=sys.stderr)
+            time.sleep(interval)
+            elapsed_time += interval
+            if elapsed_time >= timeout:
+                print("Timeout is reached. lemonldapng-app is not available.", file=sys.stderr)
+                # Exit with an error code   
+                sys.exit(1)
+    
+    # Retrieve the cross domain authentication (CDA) value
+    try:
+        command = [
+            "podman", "exec", "lemonldapng-app",
+            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "cda"
+        ]
+        result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
+        output = result.stdout.strip()
+        config['cda_status'] = True if output == 'cda = 1' else False
+    except subprocess.CalledProcessError:
+        print("Error retrieving CDA status", file=sys.stderr)
 
-# Setup cross domain authentication
-cda = data.get("cda_status", False)
-agent.set_env("CDA_STATUS", "True" if cda else "False")
+    # Retrieve the issuerDBSAMLActivation value
+    try:
+        command = [
+            "podman", "exec", "lemonldapng-app",
+            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "issuerDBSAMLActivation"
+        ]
+        result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
+        output = result.stdout.strip()
+        config['saml_status'] = True if output == 'issuerDBSAMLActivation = 1' else False
+    except subprocess.CalledProcessError:
+        print("Error retrieving SAML status", file=sys.stderr)
 
-# Setup issuerDBSAMLActivation
-issuer_dbsaml_activation = data.get("saml_status", False)
-agent.set_env("SAML_STATUS", "True" if issuer_dbsaml_activation else "False")
+    # Retrieve the sample apps status
+    try:
+        # Run the podman command to check if sample apps are enabled
+        status = subprocess.run(
+            "podman exec lemonldapng-app /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 get 'applicationList/1sample/catname' | grep -q 'Sample applications' && echo 'true' || echo 'false'",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+        sample_apps_status = status.stdout.strip()
+        config['sample_apps_status'] = True if sample_apps_status == 'true' else False
 
-# Setup sample apps status
-sample_apps_status = data.get("sample_apps_status", False)
-agent.set_env("SAMPLE_APPS_STATUS", "True" if sample_apps_status else "False")
+        # Optionally, update the environment variable for SAMPLE_APPS_STATUS
+        agent.set_env("SAMPLE_APPS_STATUS", sample_apps_status)
+
+    except subprocess.CalledProcessError:
+        print("Error retrieving Sample Apps status", file=sys.stderr)
+
+# Dump the configuration to stdout
+json.dump(config, fp=sys.stdout)
