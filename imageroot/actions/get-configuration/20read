@@ -56,7 +56,7 @@ if service_status != "active":
     config['sample_apps_status'] = False  # Default to disabled if service is not active
 else:
     # Wait for the lemonldapng-app command to succeed (timeout: 30 seconds)
-    timeout = 600  # seconds
+    timeout = 60  # seconds
     interval = 1  # seconds between retries
     elapsed_time = 0
 
