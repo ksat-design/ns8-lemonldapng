@@ -9,7 +9,6 @@ import os
 import json
 import sys
 import agent
-import subprocess
 
 data = json.load(sys.stdin)
 
@@ -35,14 +34,3 @@ agent.set_env("SAML_STATUS", "True" if issuer_dbsaml_activation else "False")
 # Setup sample apps status
 sample_apps_status = data.get("sample_apps_status", False)
 agent.set_env("SAMPLE_APPS_STATUS", "True" if sample_apps_status else "False")
-
-# Optionally run the update script if needed
-try:
-    subprocess.run(
-        ["/usr/local/bin/update-sample-apps-settings"],
-        check=True
-    )
-except FileNotFoundError:
-    print("Warning: /usr/local/bin/update-sample-apps-settings not found", file=sys.stderr)
-except subprocess.CalledProcessError as e:
-    print(f"Error running update-sample-apps-settings: {e}", file=sys.stderr)
