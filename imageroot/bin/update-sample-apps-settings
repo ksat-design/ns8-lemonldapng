@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 #
 # Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
@@ -8,60 +9,44 @@ import os
 import sys
 import subprocess
 
-def add_sample_apps(lemdomain):
-    """Add 'Sample applications' category with Test 1 and Test 2."""
-    command = [
-        "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "addKey",
-        "applicationList/applications1", "type", "category",
-        "applicationList/applications1", "catname", "Sample applications",
+# Check whether sample apps are enabled
+sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "False") == "True"
 
-        "applicationList/applications1/sample", "type", "application",
-        "applicationList/applications1/sample/options", "description", "A sample application",
-        "applicationList/applications1/sample/options", "display", "on",
-        "applicationList/applications1/sample/options", "logo", "demo.png",
-        "applicationList/applications1/sample/options", "name", "Test 1",
-        "applicationList/applications1/sample/options", "uri", f"https://test1.{lemdomain}/",
-
-        "applicationList/applications1/sample2", "type", "application",
-        "applicationList/applications1/sample2/options", "description", "A sample application",
-        "applicationList/applications1/sample2/options", "display", "on",
-        "applicationList/applications1/sample2/options", "logo", "demo.png",
-        "applicationList/applications1/sample2/options", "name", "Test 2",
-        "applicationList/applications1/sample2/options", "uri", f"https://test2.{lemdomain}/"
-    ]
-
-    try:
-        subprocess.run(command, check=True)
-        print("Sample applications added successfully.", file=sys.stderr)
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to add sample applications: {e}", file=sys.stderr)
-        sys.exit(1)
-
-def remove_sample_apps():
-    """Remove 'Sample applications' category and its apps."""
-    command = [
-        "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "delKey",
-        "applicationList/applications1", "sample",
-        "applicationList/applications1", "sample2",
-        "applicationList", "applications1"
-    ]
-
-    try:
-        subprocess.run(command, check=True)
-        print("Sample applications removed successfully.", file=sys.stderr)
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to remove sample applications: {e}", file=sys.stderr)
-        sys.exit(1)
-
-# Environment variable check
-sample_apps_enabled = os.getenv("SAMPLE_APPS_ENABLED", "False") == "True"
-lemdomain = os.getenv("LEM_DOMAIN", "example.com")
+# Set up base podman command
+cli = [
+    "podman", "exec", "lemonldapng-app",
+    "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1"
+]
 
 if sample_apps_enabled:
-    print("Sample applications enabled, adding...", file=sys.stderr)
-    add_sample_apps(lemdomain)
+    print("Sample apps are enabled. Creating entries...", file=sys.stderr)
+
+    subprocess.run(cli + [
+        "set",
+        "applicationList/applications1/type", "category",
+        "applicationList/applications1/catname", "Sample applications",
+        "applicationList/applications1/sample1/type", "application",
+        "applicationList/applications1/sample1/options/description", "A sample application",
+        "applicationList/applications1/sample1/options/display", "on",
+        "applicationList/applications1/sample1/options/logo", "demo.png",
+        "applicationList/applications1/sample1/options/name", "Test app 1",
+        "applicationList/applications1/sample1/options/url", f"https://test1.{lemdomain}",
+        "applicationList/applications1/type", "category",
+        "applicationList/applications1/catname", "Sample applications",
+        "applicationList/applications1/sample2/type", "application",
+        "applicationList/applications1/sample2/options/description", "A sample application",
+        "applicationList/applications1/sample2/options/display", "on",
+        "applicationList/applications1/sample2/options/logo", "demo.png",
+        "applicationList/applications1/sample2/options/name", "Test app 2",
+        "applicationList/applications1/sample2/options/url", f"https://test2.{lemdomain}",
+    ], check=True)
+
 else:
-    print("Sample applications disabled, removing...", file=sys.stderr)
-    remove_sample_apps()
+    print("Sample apps are disabled. Removing entries...", file=sys.stderr)
+
+    subprocess.run(cli + [
+        "delKey",
+        "applicationList/applications1", "sample1",
+        "applicationList/applications1", "sample2",
+        "applicationList", "applications1"
+    ], check=True)
