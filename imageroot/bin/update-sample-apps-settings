@@ -6,45 +6,54 @@
 #
 
 import os
-import sys
 import subprocess
 
 # Check whether sample apps are enabled
 sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "False") == "True"
 
-# Set up base podman command
+# Define the podman exec base command for LemonLDAP::NG CLI
 cli = [
     "podman", "exec", "lemonldapng-app",
     "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1"
 ]
 
 if sample_apps_enabled:
-    print("Sample apps are enabled. Creating entries...", file=sys.stderr)
+    # Assuming lemdomain is already set in the environment
+    lemdomain = os.getenv('lemdomain')
 
-
-    subprocess.run(cli + [
-        "addKey",
-        "applicationList/1sample", "type", "category",
-        "applicationList/1sample", "catname", "Sample applications",
-        "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
-        "applicationList/1sample/test1", "options", "display", "auto",
-        "applicationList/1sample/test1", "options", "logo", "demo.png",
-        "applicationList/1sample/test1", "options", "name", "Test 1",
-        "applicationList/1sample/test1", "options", "uri", f"https://test1.{lemdomain}/",
-        "applicationList/1sample/test2", "type", "application",
-        "applicationList/1sample/test2", "options", "description", "A simple application displaying authenticated user",
-        "applicationList/1sample/test2", "options", "display", "auto",
-        "applicationList/1sample/test2", "options", "logo", "demo.png",
-        "applicationList/1sample/test2", "options", "name", "Test 2",
-        "applicationList/1sample/test2", "options", "uri", f"https://test2.{lemdomain}/"
-    ], check=True)
-
+    if lemdomain:
+        command = [
+            *cli, 
+            "addKey",
+            "applicationList/1sample", "type", "category",
+            "applicationList/1sample", "catname", "Sample applications",
+            "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
+            "applicationList/1sample/test1", "options", "display", "auto",
+            "applicationList/1sample/test1", "options", "logo", "demo.png",
+            "applicationList/1sample/test1", "options", "name", "Test 1",
+            "applicationList/1sample/test1", "options", "uri", f"https://test1.{lemdomain}/",
+            "applicationList/1sample/test2", "type", "application",
+            "applicationList/1sample/test2", "options", "description", "A simple application displaying authenticated user",
+            "applicationList/1sample/test2", "options", "display", "auto",
+            "applicationList/1sample/test2", "options", "logo", "demo.png",
+            "applicationList/1sample/test2", "options", "name", "Test 2",
+            "applicationList/1sample/test2", "options", "uri", f"https://test2.{lemdomain}/"
+        ]
+        # Run the command to add sample apps
+        subprocess.run(command, check=True)
+    else:
+        print("The 'lemdomain' environment variable is not set!")
 else:
+    # If sample apps are disabled, remove the entries
     print("Sample apps are disabled. Removing entries...", file=sys.stderr)
 
-    subprocess.run(cli + [
+    remove_command = [
+        *cli, 
         "delKey",
         "applicationList/1sample", "test1",
         "applicationList/1sample", "test2",
         "applicationList", "1sample"
-    ], check=True)
+    ]
+    # Run the command to remove sample apps
+    subprocess.run(remove_command, check=True)
+
