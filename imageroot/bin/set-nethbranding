@@ -33,19 +33,9 @@ set_command = [
     "portalDisplayRegister", "0"
 ]
 
-# Delete sample applications category and apps
-del_command = [
-    "podman", "exec", "lemonldapng-app",
-    "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "delKey",
-    "applicationList/1sample", "test1",
-    "applicationList/1sample", "test2",
-    "applicationList", "1sample"
-]
-
 try:
     subprocess.run(set_command, check=True)
-    subprocess.run(del_command, check=True)
-    print("Portal settings applied and sample apps removed.", file=sys.stderr)
+    print("Portal settings applied.", file=sys.stderr)
 except subprocess.CalledProcessError as e:
     print(f"Error executing command: {e}", file=sys.stderr)
     sys.exit(1)
