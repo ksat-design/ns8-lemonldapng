@@ -21,22 +21,22 @@ cli = [
 if sample_apps_enabled:
     print("Sample apps are enabled. Creating entries...", file=sys.stderr)
 
+
     subprocess.run(cli + [
-        "set",
-        "applicationList/1sample/type", "category",
-        "applicationList/1sample/catname", "Sample applications",
-        "applicationList/1sample/test1/type", "application",
-        "applicationList/1sample/test1/options/description", "A simple application displaying authenticated user",
-        "applicationList/1sample/test1/options/display", "auto",
-        "applicationList/1sample/test1/options/logo", "demo.png",
-        "applicationList/1sample/test1/options/name", "Test app 1",
-        "applicationList/1sample/test1/options/url", f"https://test1.{lemdomain}",
-        "applicationList/1sample/test2/type", "application",
-        "applicationList/1sample/test2/options/description", "A simple application displaying authenticated user",
-        "applicationList/1sample/test2/options/display", "auto",
-        "applicationList/1sample/test2/options/logo", "demo.png",
-        "applicationList/1sample/test2/options/name", "Test app 2",
-        "applicationList/1sample/test2/options/url", f"https://test2.{lemdomain}",
+        "addKey",
+        "applicationList/1sample", "type", "category",
+        "applicationList/1sample", "catname", "Sample applications",
+        "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
+        "applicationList/1sample/test1", "options", "display", "auto",
+        "applicationList/1sample/test1", "options", "logo", "demo.png",
+        "applicationList/1sample/test1", "options", "name", "Test 1",
+        "applicationList/1sample/test1", "options", "uri", f"https://test1.{lemdomain}/",
+        "applicationList/1sample/test2", "type", "application",
+        "applicationList/1sample/test2", "options", "description", "A simple application displaying authenticated user",
+        "applicationList/1sample/test2", "options", "display", "auto",
+        "applicationList/1sample/test2", "options", "logo", "demo.png",
+        "applicationList/1sample/test2", "options", "name", "Test 2",
+        "applicationList/1sample/test2", "options", "uri", f"https://test2.{lemdomain}/"
     ], check=True)
 
 else:
