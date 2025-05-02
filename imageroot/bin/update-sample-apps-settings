@@ -23,22 +23,20 @@ if sample_apps_enabled:
 
     subprocess.run(cli + [
         "set",
-        "applicationList/applications1/type", "category",
-        "applicationList/applications1/catname", "Sample applications",
-        "applicationList/applications1/sample1/type", "application",
-        "applicationList/applications1/sample1/options/description", "A sample application",
-        "applicationList/applications1/sample1/options/display", "on",
-        "applicationList/applications1/sample1/options/logo", "demo.png",
-        "applicationList/applications1/sample1/options/name", "Test app 1",
-        "applicationList/applications1/sample1/options/url", f"https://test1.{lemdomain}",
-        "applicationList/applications1/type", "category",
-        "applicationList/applications1/catname", "Sample applications",
-        "applicationList/applications1/sample2/type", "application",
-        "applicationList/applications1/sample2/options/description", "A sample application",
-        "applicationList/applications1/sample2/options/display", "on",
-        "applicationList/applications1/sample2/options/logo", "demo.png",
-        "applicationList/applications1/sample2/options/name", "Test app 2",
-        "applicationList/applications1/sample2/options/url", f"https://test2.{lemdomain}",
+        "applicationList/1sample/type", "category",
+        "applicationList/1sample/catname", "Sample applications",
+        "applicationList/1sample/test1/type", "application",
+        "applicationList/1sample/test1/options/description", "A sample application",
+        "applicationList/1sample/test1/options/display", "on",
+        "applicationList/1sample/test1/options/logo", "demo.png",
+        "applicationList/1sample/test1/options/name", "Test app 1",
+        "applicationList/1sample/test1/options/url", f"https://test1.{lemdomain}",
+        "applicationList/1sample/test2/type", "application",
+        "applicationList/1sample/test2/options/description", "A sample application",
+        "applicationList/1sample/test2/options/display", "on",
+        "applicationList/1sample/test2/options/logo", "demo.png",
+        "applicationList/1sample/test2/options/name", "Test app 2",
+        "applicationList/1sample/test2/options/url", f"https://test2.{lemdomain}",
     ], check=True)
 
 else:
@@ -46,7 +44,7 @@ else:
 
     subprocess.run(cli + [
         "delKey",
-        "applicationList/applications1", "sample1",
-        "applicationList/applications1", "sample2",
-        "applicationList", "applications1"
+        "applicationList/1sample", "test1",
+        "applicationList/1sample", "test2",
+        "applicationList", "1sample"
     ], check=True)
