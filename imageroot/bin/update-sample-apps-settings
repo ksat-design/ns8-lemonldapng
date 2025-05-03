@@ -4,12 +4,13 @@
 # Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
+
 import sys
 import os
 import subprocess
 
 # Check whether sample apps are enabled
-sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "False") == "True"
+sample_apps_env = os.getenv("SAMPLE_APPS_STATUS", "True")
 
 # Define the podman exec base command for LemonLDAP::NG CLI
 cli = [
@@ -17,8 +18,7 @@ cli = [
     "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1"
 ]
 
-if sample_apps_enabled:
-    # Assuming lemdomain is already set in the environment
+if sample_apps_env == "True":
     lemdomain = os.getenv('lemdomain')
 
     if lemdomain:
@@ -39,12 +39,12 @@ if sample_apps_enabled:
             "applicationList/1sample/test2", "options", "name", "Test 2",
             "applicationList/1sample/test2", "options", "uri", f"https://test2.{lemdomain}/"
         ]
-        # Run the command to add sample apps
         subprocess.run(command, check=True)
     else:
-        print("The 'lemdomain' environment variable is not set!")
+        print("The 'lemdomain' environment variable is not set!", file=sys.stderr)
+
 else:
-    # If sample apps are disabled, remove the entries
+    # Only remove if explicitly disabled
     print("Sample apps are disabled. Removing entries...", file=sys.stderr)
 
     remove_command = [
@@ -54,6 +54,4 @@ else:
         "applicationList/1sample", "test2",
         "applicationList", "1sample"
     ]
-    # Run the command to remove sample apps
     subprocess.run(remove_command, check=True)
-
