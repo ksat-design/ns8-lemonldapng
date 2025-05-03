@@ -8,6 +8,17 @@
 import subprocess
 import sys
 
+# Always remove sample apps on start
+try:
+    subprocess.run([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "delKey", "applicationList/1sample"
+    ], check=True)
+    print("Sample applications removed at startup", file=sys.stderr)
+except subprocess.CalledProcessError as e:
+    print(f"Failed to remove sample apps at startup: {e}", file=sys.stderr)
+
 # Set portal branding and options
 set_command = [
     "podman", "exec", "lemonldapng-app",
