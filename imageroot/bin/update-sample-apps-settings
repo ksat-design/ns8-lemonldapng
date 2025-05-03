@@ -53,7 +53,7 @@ if sample_apps_env == "True":
                     "A simple application displaying authenticated user")
             run_cli("addKey", "applicationList/1sample/test1", "options", "display", "auto")
             run_cli("addKey", "applicationList/1sample/test1", "options", "logo", "demo.png")
-            run_cli("addKey", "applicationList/1sample/test1", "options", "name", "Test 1")
+            run_cli("addKey", "applicationList/1sample/test1", "options", "name", "Application Test 1")
             run_cli("addKey", "applicationList/1sample/test1", "options", "uri",
                     f"https://test1.{lemdomain}/")
 
@@ -63,7 +63,7 @@ if sample_apps_env == "True":
                     "A simple application displaying authenticated user")
             run_cli("addKey", "applicationList/1sample/test2", "options", "display", "auto")
             run_cli("addKey", "applicationList/1sample/test2", "options", "logo", "demo.png")
-            run_cli("addKey", "applicationList/1sample/test2", "options", "name", "Test 2")
+            run_cli("addKey", "applicationList/1sample/test2", "options", "name", "Application Test 2")
             run_cli("addKey", "applicationList/1sample/test2", "options", "uri",
                     f"https://test2.{lemdomain}/")
 
