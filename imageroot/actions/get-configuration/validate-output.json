@@ -11,7 +11,8 @@
             "ldap_domain": "domain.org",
             "configured": true,
             "cda_status": true,
-            "saml_status": true
+            "saml_status": true,
+            "sample_apps_status": true
         }
     ],
     "type": "object",
