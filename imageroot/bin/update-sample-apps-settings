@@ -18,40 +18,68 @@ cli = [
     "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1"
 ]
 
+def key_exists(path):
+    """Check if a given configuration key exists in LemonLDAP::NG."""
+    try:
+        subprocess.run(cli + ["get", path],
+                       stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL,
+                       check=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def run_cli(*args):
+    """Execute a LemonLDAP::NG CLI command."""
+    subprocess.run(cli + list(args), check=True)
+
 if sample_apps_env == "True":
     lemdomain = os.getenv('lemdomain')
 
-    if lemdomain:
-        command = [
-            *cli, 
-            "addKey",
-            "applicationList/1sample", "type", "category",
-            "applicationList/1sample", "catname", "Sample applications",
-            "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
-            "applicationList/1sample/test1", "options", "display", "auto",
-            "applicationList/1sample/test1", "options", "logo", "demo.png",
-            "applicationList/1sample/test1", "options", "name", "Test 1",
-            "applicationList/1sample/test1", "options", "uri", f"https://test1.{lemdomain}/",
-            "applicationList/1sample/test2", "type", "application",
-            "applicationList/1sample/test2", "options", "description", "A simple application displaying authenticated user",
-            "applicationList/1sample/test2", "options", "display", "auto",
-            "applicationList/1sample/test2", "options", "logo", "demo.png",
-            "applicationList/1sample/test2", "options", "name", "Test 2",
-            "applicationList/1sample/test2", "options", "uri", f"https://test2.{lemdomain}/"
-        ]
-        subprocess.run(command, check=True)
-    else:
+    if not lemdomain:
         print("The 'lemdomain' environment variable is not set!", file=sys.stderr)
+        sys.exit(1)
+
+    if not key_exists("applicationList/1sample/catname"):
+        print("Sample apps not found. Creating...", file=sys.stderr)
+
+        try:
+            run_cli("addKey", "applicationList/1sample", "type", "category")
+            run_cli("addKey", "applicationList/1sample", "catname", "Sample applications")
+
+            # App 1
+            run_cli("addKey", "applicationList/1sample/test1", "type", "application")
+            run_cli("addKey", "applicationList/1sample/test1", "options", "description",
+                    "A simple application displaying authenticated user")
+            run_cli("addKey", "applicationList/1sample/test1", "options", "display", "auto")
+            run_cli("addKey", "applicationList/1sample/test1", "options", "logo", "demo.png")
+            run_cli("addKey", "applicationList/1sample/test1", "options", "name", "Test 1")
+            run_cli("addKey", "applicationList/1sample/test1", "options", "uri",
+                    f"https://test1.{lemdomain}/")
+
+            # App 2
+            run_cli("addKey", "applicationList/1sample/test2", "type", "application")
+            run_cli("addKey", "applicationList/1sample/test2", "options", "description",
+                    "A simple application displaying authenticated user")
+            run_cli("addKey", "applicationList/1sample/test2", "options", "display", "auto")
+            run_cli("addKey", "applicationList/1sample/test2", "options", "logo", "demo.png")
+            run_cli("addKey", "applicationList/1sample/test2", "options", "name", "Test 2")
+            run_cli("addKey", "applicationList/1sample/test2", "options", "uri",
+                    f"https://test2.{lemdomain}/")
+
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to create sample apps: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print("Sample apps already exist. Skipping creation.", file=sys.stderr)
 
 else:
-    # Only remove if explicitly disabled
     print("Sample apps are disabled. Removing entries...", file=sys.stderr)
 
-    remove_command = [
-        *cli, 
-        "delKey",
-        "applicationList/1sample", "test1",
-        "applicationList/1sample", "test2",
-        "applicationList", "1sample"
-    ]
-    subprocess.run(remove_command, check=True)
+    try:
+        run_cli("delKey", "applicationList/1sample", "test1")
+        run_cli("delKey", "applicationList/1sample", "test2")
+        run_cli("delKey", "applicationList", "1sample")
+    except subprocess.CalledProcessError as e:
+        print(f"Error removing sample apps: {e}", file=sys.stderr)
+        # Not fatal — proceed gracefully
