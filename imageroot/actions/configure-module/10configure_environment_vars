@@ -9,116 +9,53 @@ import os
 import sys
 import json
 import agent
-from agent.ldapproxy import Ldapproxy
-import subprocess
-import time
+import urllib.request
+import urllib.error
+import ssl
 
-# Prepare return variable
-config = {}
+# Validation weight (0 = validation-only step)
+agent.set_weight(os.path.basename(__file__), 0)
 
-# Read current configuration from the environment file
-config["host"] = os.getenv("TRAEFIK_HOST", "")
-config["configured"] = True if config["host"] else False
-config["http_port"] = os.getenv("TRAEFIK_HTTP_PORT", "80")
-config["http2https"] = os.getenv("TRAEFIK_HTTP2HTTPS") == "True"
-config["lets_encrypt"] = os.getenv("TRAEFIK_LETS_ENCRYPT") == "True"
-config["sample_apps_status"] = os.getenv("SAMPLE_APPS_STATUS", "True") == "True"
+# Load configuration data from stdin
+data = json.load(sys.stdin)
 
-# retrieve LDAP domains list
-lp = Ldapproxy()
-domains = []
-for key in lp.get_domains_list():
-    domains.append({
-        "name": key,
-        "label": key,
-        "value": key,
-    })
+# --- Hostname validation ---
+host = data.get("host")
+old_host = os.environ.get("TRAEFIK_HOST", "")
 
-config['ldap_domain_list'] = domains
-config['ldap_domain'] = os.environ.get("LDAP_DOMAIN", '')
+if host != old_host and agent.http_route_in_use(domain=host):
+    agent.set_status('validation-failed')
+    json.dump(
+        [{
+            'field': 'host',
+            'parameter': 'host',
+            'value': host,
+            'error': 'domain_already_used_in_traefik'
+        }],
+        fp=sys.stdout
+    )
+    sys.exit(2)
 
-# Check if the lemonldapng service is active
-command = ["systemctl", "is-active", "--user", "lemonldapng"]
-try:
-    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, check=True)
-    service_status = result.stdout.strip()
-except subprocess.CalledProcessError:
-    service_status = "inactive"
+# --- LDAP Domain ---
+ldap_domain = data.get("ldap_domain", "")
 
-if service_status != "active":
-    # Set default values if the service is not active
-    config['cda_status'] = False
-    config['saml_status'] = False
-    config['sample_apps_status'] = os.getenv("SAMPLE_APPS_STATUS", "True") == "True"
+# Bind user to domain
+if ldap_domain:
+    agent.bind_user_domains([ldap_domain])
 else:
-    # Wait for the lemonldapng-app command to succeed (timeout: 30 seconds)
-    timeout = 30  # seconds
-    interval = 1  # seconds between retries
-    elapsed_time = 0
+    agent.bind_user_domains([])
 
-    # Check if lemonldapng-app is running
-    while elapsed_time < timeout:
-        command = ["systemctl", "is-active", "--user", "lemonldapng-app"]
-        try:
-            result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
-            output = result.stdout.strip()
-            if output == 'active':
-                break
-        except subprocess.CalledProcessError:
-            print("Waiting for lemonldapng-app to become available...", file=sys.stderr)
-            time.sleep(interval)
-            elapsed_time += interval
-            if elapsed_time >= timeout:
-                print("Timeout reached. lemonldapng-app is not available.", file=sys.stderr)
-                sys.exit(1)
+# Set LDAP domain env
+agent.set_env("LDAP_DOMAIN", ldap_domain)
 
-    # Retrieve the cross domain authentication (CDA) value
-    try:
-        command = [
-            "podman", "exec", "lemonldapng-app",
-            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "cda"
-        ]
-        result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
-        output = result.stdout.strip()
-        config['cda_status'] = True if output == 'cda = 1' else False
-    except subprocess.CalledProcessError:
-        print("Error retrieving CDA status", file=sys.stderr)
+# --- CDA ---
+cda = data.get("cda_status", False)
+agent.set_env("CDA_STATUS", "True" if cda else "False")
 
-    # Retrieve the issuerDBSAMLActivation value
-    try:
-        command = [
-            "podman", "exec", "lemonldapng-app",
-            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "issuerDBSAMLActivation"
-        ]
-        result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
-        output = result.stdout.strip()
-        config['saml_status'] = True if output == 'issuerDBSAMLActivation = 1' else False
-    except subprocess.CalledProcessError:
-        print("Error retrieving SAML status", file=sys.stderr)
+# --- SAML ---
+saml = data.get("saml_status", False)
+agent.set_env("SAML_STATUS", "True" if saml else "False")
 
-    # --- Refactored Sample Apps Status Check ---
-    def get_sample_apps_status():
-        """Check if the Sample Applications category exists."""
-        try:
-            result = subprocess.run(
-                [
-                    "podman", "exec", "lemonldapng-app",
-                    "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
-                    "get", "applicationList/1sample/catname"
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                check=True
-            )
-            return "Sample applications" in result.stdout
-        except subprocess.CalledProcessError:
-            print("Error retrieving Sample Apps status", file=sys.stderr)
-            return False
-
-    sample_apps_status = get_sample_apps_status()
-    config['sample_apps_status'] = sample_apps_status
-    agent.set_env("SAMPLE_APPS_STATUS", str(sample_apps_status))
-
-# Dump the configuration to stdout
-json.dump(config, fp=sys.stdout)
+# --- Sample Apps ---
+sample_apps = data.get("sample_apps_status", True)  # default to enabled
+agent.set_env("SAMPLE_APPS_STATUS", "True" if sample_apps else "False")
