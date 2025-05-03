@@ -59,8 +59,9 @@
     },
     "sample_apps_status": {
       "type": "boolean",
-      "title": "Sample apps status",
-      "description": "True if sample applications should be enabled"
+      "title": "Sample Apps status",
+      "description": "True if sample applications should be enabled",
+      "default": true
     }
   }
 }
