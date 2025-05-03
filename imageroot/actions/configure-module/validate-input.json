@@ -4,15 +4,17 @@
   "$id": "http://nethserver.org/json-schema/task/input/lemonldapng/configure-module",
   "description": "Configure lemonldapng",
   "examples": [
-    {
-      "host": "lemonldapng.domain.org",
-      "http2https": true,
-      "lets_encrypt": true,
-      "ldap_domain": "domain.org",
-      "cda_status": true,
-      "saml_status": true,
-      "sample_apps_status": false
-    }
+{
+  "host": "lemonldapng.domain.org",
+  "http2https": true,
+  "lets_encrypt": true,
+  "ldap_domain": "domain.org",
+  "configured": true,
+  "cda_status": true,
+  "saml_status": true,
+  "sample_apps_status": false
+}
+
   ],
   "type": "object",
   "required": [
