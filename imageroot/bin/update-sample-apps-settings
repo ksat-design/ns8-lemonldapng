@@ -46,6 +46,3 @@ else:
     # If disabled, remove the apps
     print("Sample apps are disabled. Removing apps...", file=sys.stderr)
     subprocess.run(cli + [
-        "delKey", "applicationList/1sample/test1",
-        "delKey", "applicationList/1sample/test2"
-    ])
