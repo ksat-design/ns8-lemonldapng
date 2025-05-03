@@ -53,74 +53,63 @@ if service_status != "active":
     # Set default values if the service is not active
     config['cda_status'] = False
     config['saml_status'] = False
-    config['sample_apps_status'] = False  # Default to disabled if service is not active
+    config['sample_apps_status'] = False
 else:
-    # Wait for the lemonldapng-app command to succeed (timeout: 30 seconds)
-    timeout = 60  # seconds
-    interval = 1  # seconds between retries
+    # Wait for the lemonldapng-app command to succeed (timeout: 60 seconds)
+    timeout = 60
+    interval = 1
     elapsed_time = 0
 
-    # Check if lemonldapng-app is running
     while elapsed_time < timeout:
         command = ["systemctl", "is-active", "--user", "lemonldapng-app"]
         try:
             result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
-            output = result.stdout.strip()
-            if output == 'active':  # If the command succeeds and returns output, break the loop
+            if result.stdout.strip() == 'active':
                 break
         except subprocess.CalledProcessError:
-            # Print a message to stderr and wait before retrying
             print("Waiting for lemonldapng-app to become available...", file=sys.stderr)
             time.sleep(interval)
             elapsed_time += interval
             if elapsed_time >= timeout:
                 print("Timeout is reached. lemonldapng-app is not available.", file=sys.stderr)
-                # Exit with an error code   
                 sys.exit(1)
-    
-    # Retrieve the cross domain authentication (CDA) value
+
+    # CDA status
     try:
-        command = [
-            "podman", "exec", "lemonldapng-app",
-            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "cda"
-        ]
-        result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
-        output = result.stdout.strip()
-        config['cda_status'] = True if output == 'cda = 1' else False
+        result = subprocess.run(
+            ["podman", "exec", "lemonldapng-app", "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "cda"],
+            stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True
+        )
+        config['cda_status'] = result.stdout.strip() == 'cda = 1'
     except subprocess.CalledProcessError:
         print("Error retrieving CDA status", file=sys.stderr)
 
-    # Retrieve the issuerDBSAMLActivation value
+    # SAML status
     try:
-        command = [
-            "podman", "exec", "lemonldapng-app",
-            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "issuerDBSAMLActivation"
-        ]
-        result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
-        output = result.stdout.strip()
-        config['saml_status'] = True if output == 'issuerDBSAMLActivation = 1' else False
+        result = subprocess.run(
+            ["podman", "exec", "lemonldapng-app", "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "issuerDBSAMLActivation"],
+            stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True
+        )
+        config['saml_status'] = result.stdout.strip() == 'issuerDBSAMLActivation = 1'
     except subprocess.CalledProcessError:
         print("Error retrieving SAML status", file=sys.stderr)
 
-    # Retrieve the sample apps status
+    # Sample Apps status
     try:
-        # Run the podman command to check if sample apps are enabled
-        status = subprocess.run(
+        result = subprocess.run(
             "podman exec lemonldapng-app /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 get 'applicationList/1sample/catname' | grep -q 'Sample applications' && echo 'true' || echo 'false'",
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True
+            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
         )
-        sample_apps_status = status.stdout.strip()
-        config['sample_apps_status'] = True if sample_apps_status == 'true' else False
+        sample_apps_status = result.stdout.strip().lower() == 'true'
 
-        # Optionally, update the environment variable for SAMPLE_APPS_STATUS
-        agent.set_env("SAMPLE_APPS_STATUS", sample_apps_status)
+        # Only write "True" to env to preserve user intent
+        if sample_apps_status:
+            agent.set_env("SAMPLE_APPS_STATUS", "True")
+
+        config['sample_apps_status'] = os.getenv("SAMPLE_APPS_STATUS", "True") == "True"
 
     except subprocess.CalledProcessError:
         print("Error retrieving Sample Apps status", file=sys.stderr)
 
-# Dump the configuration to stdout
+# Output the configuration
 json.dump(config, fp=sys.stdout)
