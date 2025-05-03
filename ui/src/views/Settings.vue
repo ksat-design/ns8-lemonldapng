@@ -388,6 +388,7 @@ export default {
             ldap_domain: this.ldap_domain == "-" ? "" : this.ldap_domain,
             saml_status: this.saml_status,
             cda_status: this.cda_status,
+            sample_apps_status: this.sample_apps_status,
           },
           extra: {
             title: this.$t("settings.instance_configuration", {
