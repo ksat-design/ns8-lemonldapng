@@ -9,6 +9,12 @@ import sys
 import os
 import subprocess
 
+# Get the TRAEFIK_HOST environment variable or use a default value if it's not set
+traefik_host = os.getenv("TRAEFIK_HOST", "default-hostname.com")
+
+# Debugging: Print the value of TRAEFIK_HOST
+print(f"Using TRAEFIK_HOST: {traefik_host}", file=sys.stderr)
+
 # Check if sample apps are enabled or disabled
 sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "True") == "True"
 
@@ -28,13 +34,13 @@ if sample_apps_enabled:
         "applicationList/1sample/test1", "options", "display", "auto",
         "applicationList/1sample/test1", "options", "logo", "demo.png",
         "applicationList/1sample/test1", "options", "name", "Application Test 1",
-        "applicationList/1sample/test1", "options", "uri", "https://test1.${lemdomain}/",
+        "applicationList/1sample/test1", "options", "uri", f"https://test1.{traefik_host}/",  # Using f-string
         "applicationList/1sample/test2", "type", "application",
         "applicationList/1sample/test2", "options", "description", "Another simple app",
         "applicationList/1sample/test2", "options", "display", "auto",
         "applicationList/1sample/test2", "options", "logo", "thumbnail.png",
         "applicationList/1sample/test2", "options", "name", "Application Test 2",
-        "applicationList/1sample/test2", "options", "uri", "https://test2.${lemdomain}/"
+        "applicationList/1sample/test2", "options", "uri", f"https://test2.{traefik_host}/"  # Using f-string
     ])
 else:
     # If disabled, remove the apps
@@ -43,4 +49,3 @@ else:
         "delKey", "applicationList/1sample/test1",
         "delKey", "applicationList/1sample/test2"
     ])
-
