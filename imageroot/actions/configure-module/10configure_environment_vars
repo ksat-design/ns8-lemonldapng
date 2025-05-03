@@ -36,6 +36,9 @@ if host != old_host and agent.http_route_in_use(domain=host):
     )
     sys.exit(2)
 
+# Set lemdomain in the environment for use by other scripts
+agent.set_env("lemdomain", host)
+
 # --- LDAP Domain ---
 ldap_domain = data.get("ldap_domain", "")
 
