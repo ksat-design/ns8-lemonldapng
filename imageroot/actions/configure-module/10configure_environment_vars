@@ -52,7 +52,7 @@ if service_status != "active":
     config['sample_apps_status'] = False  # Default to disabled if service is not active
 else:
     # Wait for the lemonldapng-app command to succeed (timeout: 30 seconds)
-    timeout = 30  # seconds
+    timeout = 60  # seconds
     interval = 1  # seconds between retries
     elapsed_time = 0
 
@@ -96,29 +96,31 @@ else:
     except subprocess.CalledProcessError:
         print("Error retrieving SAML status", file=sys.stderr)
 
-    # --- Refactored Sample Apps Status Check ---
-    def get_sample_apps_status():
-        """Check if the Sample Applications category exists."""
-        try:
-            result = subprocess.run(
-                [
-                    "podman", "exec", "lemonldapng-app",
-                    "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
-                    "get", "applicationList/1sample/catname"
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                check=True
-            )
-            return "Sample applications" in result.stdout
-        except subprocess.CalledProcessError:
-            print("Error retrieving Sample Apps status", file=sys.stderr)
-            return False
+# --- Refactored Sample Apps Status Check ---
+def get_sample_apps_status():
+    """Check if the 'uri' for Sample Application 2 exists."""
+    try:
+        result = subprocess.run(
+            [
+                "podman", "exec", "lemonldapng-app",
+                "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+                "get", "applicationList/1sample/test2/options/uri"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=True
+        )
+        return bool(result.stdout.strip())  # Check if the output is not empty
+    except subprocess.CalledProcessError:
+        print("Error retrieving Sample Apps status", file=sys.stderr)
+        return False
 
-    sample_apps_status = get_sample_apps_status()
-    config['sample_apps_status'] = sample_apps_status
-    agent.set_env("SAMPLE_APPS_STATUS", str(sample_apps_status))
+# Check the Sample Apps status
+sample_apps_status = get_sample_apps_status()
+config['sample_apps_status'] = sample_apps_status
+agent.set_env("SAMPLE_APPS_STATUS", str(sample_apps_status))
 
 # Dump the configuration to stdout
 json.dump(config, fp=sys.stdout)
+
