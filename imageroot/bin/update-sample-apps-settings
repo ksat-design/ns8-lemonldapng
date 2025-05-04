@@ -4,9 +4,11 @@
 # Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
+
 import sys
 import os
 import subprocess
+import json
 
 # Check whether sample apps are enabled
 sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "False") == "True"
@@ -19,7 +21,7 @@ cli = [
 
 if sample_apps_enabled:
     # Assuming SSODOMAIN is already set in the environment
-    SSODOMAIN = os.getenv('SSODOMAIN')
+    SSODOMAIN = os.getenv('SSODOMAIN', '').strip()
 
     if SSODOMAIN:
         # Check if the sample apps exist by looking at the URI
@@ -30,35 +32,50 @@ if sample_apps_enabled:
         
         try:
             result = subprocess.run(check_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-            # If the URI exists (non-empty), skip adding the sample apps
             if result.stdout.strip():
                 print("Sample apps already exist. Skipping add operation.")
             else:
-                # If the sample apps do not exist, add them
                 print("Sample apps do not exist. Adding sample apps...")
-                command = [
-                    *cli, 
-                    "addKey",
-                    "applicationList/1sample", "type", "category",
-                    "applicationList/1sample", "catname", "Sample applications",
-                    "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
-                    "applicationList/1sample/test1", "options", "display", "auto",
-                    "applicationList/1sample/test1", "options", "logo", "demo.png",
-                    "applicationList/1sample/test1", "options", "name", "Test 1",
-                    "applicationList/1sample/test1", "options", "uri", f"https://test1.{SSODOMAIN}/",
-                    "applicationList/1sample/test2", "type", "application",
-                    "applicationList/1sample/test2", "options", "description", "A simple application displaying authenticated user",
-                    "applicationList/1sample/test2", "options", "display", "auto",
-                    "applicationList/1sample/test2", "options", "logo", "demo.png",
-                    "applicationList/1sample/test2", "options", "name", "Test 2",
-                    "applicationList/1sample/test2", "options", "uri", f"https://test2.{SSODOMAIN}/"
+
+                # Build the nested JSON structure
+                sample_apps = {
+                    "type": "category",
+                    "catname": "Sample applications",
+                    "test1": {
+                        "options": {
+                            "description": "A simple application displaying authenticated user",
+                            "display": "auto",
+                            "logo": "demo.png",
+                            "name": "Test 1",
+                            "uri": f"https://test1.{SSODOMAIN}/"
+                        }
+                    },
+                    "test2": {
+                        "type": "application",
+                        "options": {
+                            "description": "A simple application displaying authenticated user",
+                            "display": "auto",
+                            "logo": "demo.png",
+                            "name": "Test 2",
+                            "uri": f"https://test2.{SSODOMAIN}/"
+                        }
+                    }
+                }
+
+                set_command = [
+                    *cli,
+                    "set", "applicationList/1sample",
+                    json.dumps(sample_apps)
                 ]
-                subprocess.run(command, check=True)
-        except subprocess.CalledProcessError:
-            print("Error checking sample app URI", file=sys.stderr)
+                subprocess.run(set_command, check=True)
+        except subprocess.CalledProcessError as e:
+            print("Error checking or setting sample apps:", file=sys.stderr)
+            print(e.stderr, file=sys.stderr)
             sys.exit(1)
     else:
-        print("The 'SSODOMAIN' environment variable is not set!")
+        print("The 'SSODOMAIN' environment variable is not set!", file=sys.stderr)
+        sys.exit(1)
+
 else:
     # If sample apps are disabled, remove the entries
     print("Sample apps are disabled. Removing entries...", file=sys.stderr)
@@ -70,5 +87,10 @@ else:
         "applicationList/1sample", "test2",
         "applicationList", "1sample"
     ]
-    # Run the command to remove sample apps
-    subprocess.run(remove_command, check=True)
+
+    try:
+        subprocess.run(remove_command, check=True)
+    except subprocess.CalledProcessError as e:
+        print("Error deleting sample apps:", file=sys.stderr)
+        print(e.stderr, file=sys.stderr)
+        sys.exit(1)
