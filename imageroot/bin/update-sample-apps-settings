@@ -8,7 +8,6 @@
 import sys
 import os
 import subprocess
-import json
 
 # Check whether sample apps are enabled
 sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "False") == "True"
@@ -37,37 +36,30 @@ if sample_apps_enabled:
             else:
                 print("Sample apps do not exist. Adding sample apps...")
 
-                # Build the nested JSON structure
-                sample_apps = {
-                    "type": "category",
-                    "catname": "Sample applications",
-                    "test1": {
-                        "options": {
-                            "description": "A simple application displaying authenticated user",
-                            "display": "auto",
-                            "logo": "demo.png",
-                            "name": "Test 1",
-                            "uri": f"https://test1.{SSODOMAIN}/"
-                        }
-                    },
-                    "test2": {
-                        "type": "application",
-                        "options": {
-                            "description": "A simple application displaying authenticated user",
-                            "display": "auto",
-                            "logo": "demo.png",
-                            "name": "Test 2",
-                            "uri": f"https://test2.{SSODOMAIN}/"
-                        }
-                    }
-                }
-
-                set_command = [
-                    *cli,
-                    "set", "applicationList/1sample",
-                    json.dumps(sample_apps)
+                add_commands = [
+                    [*cli, "addKey", "applicationList/1sample/type", "category"],
+                    [*cli, "addKey", "applicationList/1sample/catname", "Sample applications"],
+                    [*cli, "addKey", "applicationList/1sample/test1/options/description", "A simple application displaying authenticated user"],
+                    [*cli, "addKey", "applicationList/1sample/test1/options/display", "auto"],
+                    [*cli, "addKey", "applicationList/1sample/test1/options/logo", "demo.png"],
+                    [*cli, "addKey", "applicationList/1sample/test1/options/name", "Test 1"],
+                    [*cli, "addKey", "applicationList/1sample/test1/options/uri", f"https://test1.{SSODOMAIN}/"],
+                    [*cli, "addKey", "applicationList/1sample/test2/type", "application"],
+                    [*cli, "addKey", "applicationList/1sample/test2/options/description", "A simple application displaying authenticated user"],
+                    [*cli, "addKey", "applicationList/1sample/test2/options/display", "auto"],
+                    [*cli, "addKey", "applicationList/1sample/test2/options/logo", "demo.png"],
+                    [*cli, "addKey", "applicationList/1sample/test2/options/name", "Test 2"],
+                    [*cli, "addKey", "applicationList/1sample/test2/options/uri", f"https://test2.{SSODOMAIN}/"],
                 ]
-                subprocess.run(set_command, check=True)
+
+                for cmd in add_commands:
+                    try:
+                        subprocess.run(cmd, check=True)
+                    except subprocess.CalledProcessError as e:
+                        print(f"Failed to add key: {' '.join(cmd[-2:])}", file=sys.stderr)
+                        print(e.stderr, file=sys.stderr)
+                        sys.exit(1)
+
         except subprocess.CalledProcessError as e:
             print("Error checking or setting sample apps:", file=sys.stderr)
             print(e.stderr, file=sys.stderr)
