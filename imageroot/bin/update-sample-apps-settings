@@ -18,10 +18,10 @@ cli = [
 ]
 
 if sample_apps_enabled:
-    # Assuming lemdomain is already set in the environment
-    lemdomain = os.getenv('lemdomain')
+    # Assuming SSODOMAIN is already set in the environment
+    SSODOMAIN = os.getenv('SSODOMAIN')
 
-    if lemdomain:
+    if SSODOMAIN:
         command = [
             *cli, 
             "addKey",
@@ -42,7 +42,7 @@ if sample_apps_enabled:
         # Run the command to add sample apps
         subprocess.run(command, check=True)
     else:
-        print("The 'lemdomain' environment variable is not set!")
+        print("The 'SSODOMAIN' environment variable is not set!")
 else:
     # If sample apps are disabled, remove the entries
     print("Sample apps are disabled. Removing entries...", file=sys.stderr)
@@ -56,4 +56,3 @@ else:
     ]
     # Run the command to remove sample apps
     subprocess.run(remove_command, check=True)
-
