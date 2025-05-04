@@ -4,48 +4,71 @@
 # Copyright (C) 2025 Nethesis S.r.l.
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-
 import sys
 import os
 import subprocess
 
-# Get the TRAEFIK_HOST environment variable or use a default value if it's not set
-traefik_host = os.getenv("TRAEFIK_HOST", "default-hostname.com")
+# Check whether sample apps are enabled
+sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "False") == "True"
 
-# Debugging: Print the value of TRAEFIK_HOST
-print(f"Using TRAEFIK_HOST: {traefik_host}", file=sys.stderr)
-
-# Check if sample apps are enabled or disabled
-sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "True") == "True"
-
-# Define the podman exec command for sample apps operations
+# Define the podman exec base command for LemonLDAP::NG CLI
 cli = [
     "podman", "exec", "lemonldapng-app",
     "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1"
 ]
 
 if sample_apps_enabled:
-    # If enabled, check if apps already exist. If not, add them.
-    print("Sample apps are enabled. Ensuring apps are created...", file=sys.stderr)
-    subprocess.run(cli + [
-        "addKey", "applicationList/1sample", "type", "category",
-        "applicationList/1sample", "catname", "Sample applications",
-        "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
-        "applicationList/1sample/test1", "options", "display", "auto",
-        "applicationList/1sample/test1", "options", "logo", "demo.png",
-        "applicationList/1sample/test1", "options", "name", "Application Test 1",
-        "applicationList/1sample/test1", "options", "uri", f"https://test1.{traefik_host}/",  # Using f-string
-        "applicationList/1sample/test2", "type", "application",
-        "applicationList/1sample/test2", "options", "description", "Another simple app",
-        "applicationList/1sample/test2", "options", "display", "auto",
-        "applicationList/1sample/test2", "options", "logo", "thumbnail.png",
-        "applicationList/1sample/test2", "options", "name", "Application Test 2",
-        "applicationList/1sample/test2", "options", "uri", f"https://test2.{traefik_host}/"  # Using f-string
-    ])
+    # Assuming SSODOMAIN is already set in the environment
+    SSODOMAIN = os.getenv('SSODOMAIN')
+
+    if SSODOMAIN:
+        # Check if the sample apps exist by looking at the URI
+        check_command = [
+            *cli,
+            "get", "applicationList/1sample/test2/options/uri"
+        ]
+        
+        try:
+            result = subprocess.run(check_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+            # If the URI exists (non-empty), skip adding the sample apps
+            if result.stdout.strip():
+                print("Sample apps already exist. Skipping add operation.")
+            else:
+                # If the sample apps do not exist, add them
+                print("Sample apps do not exist. Adding sample apps...")
+                command = [
+                    *cli, 
+                    "addKey",
+                    "applicationList/1sample", "type", "category",
+                    "applicationList/1sample", "catname", "Sample applications",
+                    "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
+                    "applicationList/1sample/test1", "options", "display", "auto",
+                    "applicationList/1sample/test1", "options", "logo", "demo.png",
+                    "applicationList/1sample/test1", "options", "name", "Test 1",
+                    "applicationList/1sample/test1", "options", "uri", f"https://test1.{SSODOMAIN}/",
+                    "applicationList/1sample/test2", "type", "application",
+                    "applicationList/1sample/test2", "options", "description", "A simple application displaying authenticated user",
+                    "applicationList/1sample/test2", "options", "display", "auto",
+                    "applicationList/1sample/test2", "options", "logo", "demo.png",
+                    "applicationList/1sample/test2", "options", "name", "Test 2",
+                    "applicationList/1sample/test2", "options", "uri", f"https://test2.{SSODOMAIN}/"
+                ]
+                subprocess.run(command, check=True)
+        except subprocess.CalledProcessError:
+            print("Error checking sample app URI", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print("The 'SSODOMAIN' environment variable is not set!")
 else:
-    # If disabled, remove the apps
-    print("Sample apps are disabled. Removing apps...", file=sys.stderr)
-    subprocess.run(cli + [
-        "delKey", "applicationList/1sample/test1",
-        "delKey", "applicationList/1sample/test2"
-    ])
+    # If sample apps are disabled, remove the entries
+    print("Sample apps are disabled. Removing entries...", file=sys.stderr)
+
+    remove_command = [
+        *cli, 
+        "delKey",
+        "applicationList/1sample", "test1",
+        "applicationList/1sample", "test2",
+        "applicationList", "1sample"
+    ]
+    # Run the command to remove sample apps
+    subprocess.run(remove_command, check=True)
