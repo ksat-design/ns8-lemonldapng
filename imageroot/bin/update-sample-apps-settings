@@ -17,30 +17,47 @@ cli = [
     "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1"
 ]
 
+# Check if sample apps are enabled
 if sample_apps_enabled:
     # Assuming SSODOMAIN is already set in the environment
     SSODOMAIN = os.getenv('SSODOMAIN')
 
     if SSODOMAIN:
-        command = [
-            *cli, 
-            "addKey",
-            "applicationList/1sample", "type", "category",
-            "applicationList/1sample", "catname", "Sample applications",
-            "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
-            "applicationList/1sample/test1", "options", "display", "auto",
-            "applicationList/1sample/test1", "options", "logo", "demo.png",
-            "applicationList/1sample/test1", "options", "name", "Test 1",
-            "applicationList/1sample/test1", "options", "uri", f"https://test1.{SSODOMAIN}/",
-            "applicationList/1sample/test2", "type", "application",
-            "applicationList/1sample/test2", "options", "description", "A simple application displaying authenticated user",
-            "applicationList/1sample/test2", "options", "display", "auto",
-            "applicationList/1sample/test2", "options", "logo", "demo.png",
-            "applicationList/1sample/test2", "options", "name", "Test 2",
-            "applicationList/1sample/test2", "options", "uri", f"https://test2.{SSODOMAIN}/"
+        # Check if the sample app keys already exist (e.g., check if the URIs are already set)
+        check_command = [
+            *cli,
+            "get", "applicationList/1sample/test2/options/uri"
         ]
-        # Run the command to add sample apps
-        subprocess.run(command, check=True)
+        
+        try:
+            result = subprocess.run(check_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+            # If the URI exists (non-empty), skip adding
+            if result.stdout.strip():
+                print("Sample apps already exist. Skipping add operation.")
+            else:
+                # Add the keys if the sample app does not exist
+                print("Sample apps do not exist. Adding sample apps...")
+                command = [
+                    *cli, 
+                    "addKey",
+                    "applicationList/1sample", "type", "category",
+                    "applicationList/1sample", "catname", "Sample applications",
+                    "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
+                    "applicationList/1sample/test1", "options", "display", "auto",
+                    "applicationList/1sample/test1", "options", "logo", "demo.png",
+                    "applicationList/1sample/test1", "options", "name", "Test 1",
+                    "applicationList/1sample/test1", "options", "uri", f"https://test1.{SSODOMAIN}/",
+                    "applicationList/1sample/test2", "type", "application",
+                    "applicationList/1sample/test2", "options", "description", "A simple application displaying authenticated user",
+                    "applicationList/1sample/test2", "options", "display", "auto",
+                    "applicationList/1sample/test2", "options", "logo", "demo.png",
+                    "applicationList/1sample/test2", "options", "name", "Test 2",
+                    "applicationList/1sample/test2", "options", "uri", f"https://test2.{SSODOMAIN}/"
+                ]
+                subprocess.run(command, check=True)
+        except subprocess.CalledProcessError:
+            print("Error checking sample app URI", file=sys.stderr)
+            sys.exit(1)
     else:
         print("The 'SSODOMAIN' environment variable is not set!")
 else:
