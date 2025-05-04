@@ -50,10 +50,10 @@ except subprocess.CalledProcessError:
     service_status = "inactive"
 
 if service_status != "active":
-    # Set fallback values but preserve SAMPLE_APPS_STATUS if previously set
+    # Set default values if the service is not active
     config['cda_status'] = False
     config['saml_status'] = False
-    config['sample_apps_status'] = os.getenv("SAMPLE_APPS_STATUS", "True") == "True"
+    config['sample_apps_status'] = False
 
 else:
     # Wait for the lemonldapng-app command to succeed (timeout: 60 seconds)
