@@ -104,20 +104,20 @@ else:
 
     # Retrieve the sample apps status
     try:
-        # Run the podman command to check if sample apps are enabled
-        status = subprocess.run(
-            "podman exec lemonldapng-app /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 get 'applicationList/1sample/catname' | grep -q 'Sample applications' && echo 'true' || echo 'false'",
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True
-        )
-        sample_apps_status = status.stdout.strip()
-        config['sample_apps_status'] = True if sample_apps_status == 'true' else False
+        # Run the podman command to check if sample apps are enabled, targeting applicationList/1sample/test2/options/uri
+        command = [
+            "podman", "exec", "lemonldapng-app",
+            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", 
+            "get", "applicationList/1sample/test2/options/uri"
+        ]
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        
+        # Check if the output for the URI is not empty, indicating sample apps are enabled
+        sample_apps_status = bool(result.stdout.strip())
+        config['sample_apps_status'] = sample_apps_status
 
         # Optionally, update the environment variable for SAMPLE_APPS_STATUS
-        agent.set_env("SAMPLE_APPS_STATUS", sample_apps_status)
+        agent.set_env("SAMPLE_APPS_STATUS", str(sample_apps_status))
 
     except subprocess.CalledProcessError:
         print("Error retrieving Sample Apps status", file=sys.stderr)
