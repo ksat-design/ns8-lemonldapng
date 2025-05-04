@@ -17,13 +17,12 @@ cli = [
     "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1"
 ]
 
-# Check if sample apps are enabled
 if sample_apps_enabled:
     # Assuming SSODOMAIN is already set in the environment
     SSODOMAIN = os.getenv('SSODOMAIN')
 
     if SSODOMAIN:
-        # Check if the sample app keys already exist (e.g., check if the URIs are already set)
+        # Check if the sample apps exist by looking at the URI
         check_command = [
             *cli,
             "get", "applicationList/1sample/test2/options/uri"
@@ -31,11 +30,11 @@ if sample_apps_enabled:
         
         try:
             result = subprocess.run(check_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-            # If the URI exists (non-empty), skip adding
+            # If the URI exists (non-empty), skip adding the sample apps
             if result.stdout.strip():
                 print("Sample apps already exist. Skipping add operation.")
             else:
-                # Add the keys if the sample app does not exist
+                # If the sample apps do not exist, add them
                 print("Sample apps do not exist. Adding sample apps...")
                 command = [
                     *cli, 
