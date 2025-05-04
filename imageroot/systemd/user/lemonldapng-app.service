@@ -39,7 +39,7 @@ ExecStart=/usr/bin/podman run --conmon-pidfile %t/lemonldapng-app.pid \
         --volume var-sessions:/var/lib/lemonldap-ng/sessions:Z \
         --volume var-psessions:/var/lib/lemonldap-ng/psessions:Z \
         --volume nginx:/etc/nginx/sites-enabled:Z \
-        --volume ./llng/theme:/usr/share/lemonldap-ng/portal/htdocs/static/CustomTheme:Z \
+        --volume ./llng/theme:/var/lib/lemonldap-ng/portal/htdocs/skins/CustomTheme:Z \
         --volume ./llng/template:/usr/share/lemonldap-ng/portal/templates/CustomTheme:Z \
         --volume ./llng/plugins:/usr/share/perl5/Lemonldap/NG/Portal/Plugins/CustomPlugin:Z \
         --volume ./llng/register:/usr/share/perl5/Lemonldap/NG/Portal/Register/CustomRegister:Z \
