@@ -24,7 +24,7 @@ config["http2https"] = os.getenv("TRAEFIK_HTTP2HTTPS") == "True"
 config["lets_encrypt"] = os.getenv("TRAEFIK_LETS_ENCRYPT") == "True"
 config["sample_apps_status"] = os.getenv("SAMPLE_APPS_STATUS", "False") == "True"
 
-# retrieve LDAP domains list
+# Retrieve LDAP domains list
 lp = Ldapproxy()
 domains = []
 for key in lp.get_domains_list():
@@ -35,7 +35,7 @@ for key in lp.get_domains_list():
     })
 
 config['ldap_domain_list'] = domains
-config['ldap_domain'] = os.environ.get("LDAP_DOMAIN", '')
+config['ldap_domain'] = os.environ.get("LDAP_DOMAIN", "")
 
 # Check if the lemonldapng service is active
 command = ["systemctl", "is-active", "--user", "lemonldapng"]
@@ -51,7 +51,7 @@ if service_status != "active":
     config['saml_status'] = False
     config['sample_apps_status'] = False  # Default to disabled if service is not active
 else:
-    # Wait for the lemonldapng-app command to succeed (timeout: 30 seconds)
+    # Wait for the lemonldapng-app command to succeed (timeout: 60 seconds)
     timeout = 60  # seconds
     interval = 1  # seconds between retries
     elapsed_time = 0
@@ -62,14 +62,14 @@ else:
         try:
             result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
             output = result.stdout.strip()
-            if output == 'active':
+            if output == 'active':  # If the command succeeds and returns output, break the loop
                 break
         except subprocess.CalledProcessError:
             print("Waiting for lemonldapng-app to become available...", file=sys.stderr)
             time.sleep(interval)
             elapsed_time += interval
             if elapsed_time >= timeout:
-                print("Timeout reached. lemonldapng-app is not available.", file=sys.stderr)
+                print("Timeout is reached. lemonldapng-app is not available.", file=sys.stderr)
                 sys.exit(1)
 
     # Retrieve the cross domain authentication (CDA) value
@@ -123,4 +123,3 @@ agent.set_env("SAMPLE_APPS_STATUS", str(sample_apps_status))
 
 # Dump the configuration to stdout
 json.dump(config, fp=sys.stdout)
-
