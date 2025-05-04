@@ -8,20 +8,6 @@
 import subprocess
 import sys
 
-# Get the domain using lemonldap-ng-cli
-try:
-    lemdomain = subprocess.run(
-        [
-            "podman", "exec", "lemonldapng-app",
-            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "domain"
-        ],
-        capture_output=True, text=True, check=True
-    ).stdout.strip().replace("domain = ", "")
-    print(f"Domain retrieved: {lemdomain}", file=sys.stderr)
-except subprocess.CalledProcessError as e:
-    print(f"Failed to retrieve domain: {e}", file=sys.stderr)
-    sys.exit(1)
-
 # Set portal branding and options
 set_command = [
     "podman", "exec", "lemonldapng-app",
