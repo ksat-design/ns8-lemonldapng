@@ -5,10 +5,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-#
-# Read configuration
-#
-
 import os
 import sys
 import json
@@ -28,7 +24,7 @@ config["http2https"] = os.getenv("TRAEFIK_HTTP2HTTPS") == "True"
 config["lets_encrypt"] = os.getenv("TRAEFIK_LETS_ENCRYPT") == "True"
 config["sample_apps_status"] = os.getenv("SAMPLE_APPS_STATUS", "False") == "True"
 
-# retrieve LDAP domains list
+# Retrieve LDAP domains list
 lp = Ldapproxy()
 domains = []
 for key in lp.get_domains_list():
@@ -39,7 +35,7 @@ for key in lp.get_domains_list():
     })
 
 config['ldap_domain_list'] = domains
-config['ldap_domain'] = os.environ.get("LDAP_DOMAIN", '')
+config['ldap_domain'] = os.environ.get("LDAP_DOMAIN", "")
 
 # Check if the lemonldapng service is active
 command = ["systemctl", "is-active", "--user", "lemonldapng"]
@@ -55,7 +51,7 @@ if service_status != "active":
     config['saml_status'] = False
     config['sample_apps_status'] = False  # Default to disabled if service is not active
 else:
-    # Wait for the lemonldapng-app command to succeed (timeout: 30 seconds)
+    # Wait for the lemonldapng-app command to succeed (timeout: 60 seconds)
     timeout = 60  # seconds
     interval = 1  # seconds between retries
     elapsed_time = 0
@@ -69,15 +65,13 @@ else:
             if output == 'active':  # If the command succeeds and returns output, break the loop
                 break
         except subprocess.CalledProcessError:
-            # Print a message to stderr and wait before retrying
             print("Waiting for lemonldapng-app to become available...", file=sys.stderr)
             time.sleep(interval)
             elapsed_time += interval
             if elapsed_time >= timeout:
                 print("Timeout is reached. lemonldapng-app is not available.", file=sys.stderr)
-                # Exit with an error code   
                 sys.exit(1)
-    
+
     # Retrieve the cross domain authentication (CDA) value
     try:
         command = [
@@ -107,11 +101,11 @@ else:
         # Run the podman command to check if sample apps are enabled, targeting applicationList/1sample/test2/options/uri
         command = [
             "podman", "exec", "lemonldapng-app",
-            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", 
+            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
             "get", "applicationList/1sample/test2/options/uri"
         ]
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-        
+
         # Check if the output for the URI is not empty, indicating sample apps are enabled
         sample_apps_status = bool(result.stdout.strip())
         config['sample_apps_status'] = sample_apps_status
