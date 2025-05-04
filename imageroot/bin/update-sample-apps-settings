@@ -31,13 +31,13 @@ if sample_apps_enabled:
             "applicationList/1sample/test1", "options", "display", "auto",
             "applicationList/1sample/test1", "options", "logo", "demo.png",
             "applicationList/1sample/test1", "options", "name", "Test 1",
-            "applicationList/1sample/test1", "options", "uri", f"https://test1.{lemdomain}/",
+            "applicationList/1sample/test1", "options", "uri", f"https://test1.{SSODOMAIN}/",
             "applicationList/1sample/test2", "type", "application",
             "applicationList/1sample/test2", "options", "description", "A simple application displaying authenticated user",
             "applicationList/1sample/test2", "options", "display", "auto",
             "applicationList/1sample/test2", "options", "logo", "demo.png",
             "applicationList/1sample/test2", "options", "name", "Test 2",
-            "applicationList/1sample/test2", "options", "uri", f"https://test2.{lemdomain}/"
+            "applicationList/1sample/test2", "options", "uri", f"https://test2.{SSODOMAIN}/"
         ]
         # Run the command to add sample apps
         subprocess.run(command, check=True)
