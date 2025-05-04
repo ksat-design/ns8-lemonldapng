@@ -80,17 +80,15 @@ else:
     # If sample apps are disabled, remove the entries
     print("Sample apps are disabled. Removing entries...", file=sys.stderr)
 
-    remove_command = [
-        *cli, 
-        "delKey",
-        "applicationList/1sample", "test1",
-        "applicationList/1sample", "test2",
-        "applicationList", "1sample"
+    remove_commands = [
+        [*cli, "delKey", "applicationList/1sample/test1"],
+        [*cli, "delKey", "applicationList/1sample/test2"],
+        [*cli, "delKey", "applicationList/1sample"]
     ]
 
-    try:
-        subprocess.run(remove_command, check=True)
-    except subprocess.CalledProcessError as e:
-        print("Error deleting sample apps:", file=sys.stderr)
-        print(e.stderr, file=sys.stderr)
-        sys.exit(1)
+    for cmd in remove_commands:
+        try:
+            subprocess.run(cmd, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error deleting key: {' '.join(cmd[-1:])}", file=sys.stderr)
+            print(e.stderr, file=sys.stderr)
