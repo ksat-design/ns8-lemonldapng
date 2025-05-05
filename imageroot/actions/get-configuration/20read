@@ -1,115 +1,165 @@
 #!/usr/bin/env python3
 
-#
-# Copyright (C) 2025 Nethesis S.r.l.
-# SPDX-License-Identifier: GPL-3.0-or-later
-#
-
-#
-# Read configuration
-#
-
 import os
-import sys
-import json
-import agent
-from agent.ldapproxy import Ldapproxy
 import subprocess
-import time
+import sys
+import argparse
 
-# Prepare return variable
-config = {}
 
-# Read current configuration from the environment file
-config["host"] = os.getenv("TRAEFIK_HOST", "")
-config["configured"] = True if config["host"] else False
-config["http_port"] = os.getenv("TRAEFIK_HTTP_PORT", "80")
-config["http2https"] = os.getenv("TRAEFIK_HTTP2HTTPS") == "True"
-config["lets_encrypt"] = os.getenv("TRAEFIK_LETS_ENCRYPT") == "True"
-config["sample_apps_status"] = os.getenv("SAMPLE_APPS_STATUS", "True") == "True"
+def load_env(env_file="/etc/lemonldap-ng/env"):
+    """
+    Load environment variables from a file, without overwriting existing ones.
+    """
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                if '=' in line:
+                    key, val = line.strip().split('=', 1)
+                    os.environ.setdefault(key, val)
 
-# retrieve LDAP domains list
-lp = Ldapproxy()
-domains = []
-for key in lp.get_domains_list():
-    domains.append({
-        "name": key,
-        "label": key,
-        "value": key,
-    })
 
-config['ldap_domain_list'] = domains
-config['ldap_domain'] = os.environ.get("LDAP_DOMAIN", '')
+def run_command(cmd, shell=False, capture_output=False):
+    """
+    Wrapper for subprocess.run. Returns CompletedProcess.
+    """
+    return subprocess.run(cmd, shell=shell, check=True, text=True, capture_output=capture_output)
 
-# Check if the lemonldapng service is active
-command = ["systemctl", "is-active", "--user", "lemonldapng"]
-try:
-    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, check=True)
-    service_status = result.stdout.strip()
-except subprocess.CalledProcessError:
-    service_status = "inactive"
 
-if service_status != "active":
-    # Set default values if the service is not active
-    config['cda_status'] = False
-    config['saml_status'] = False
-    config['sample_apps_status'] = False
-else:
-    # Wait for the lemonldapng-app command to succeed (timeout: 60 seconds)
-    timeout = 60
-    interval = 1
-    elapsed_time = 0
+def get_ssodomain():
+    """
+    Determine SSODOMAIN either from env or by querying LemonLDAP-NG.
+    """
+    ssodomain = os.getenv("SSODOMAIN")
+    if ssodomain:
+        return ssodomain
+    # fallback: fetch from lemonldap-ng-cli inside container
+    try:
+        cp = run_command([
+            "podman", "exec", "lemonldapng-app",
+            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli",
+            "-yes", "1", "get", "domain"
+        ], capture_output=True)
+        out = cp.stdout.strip()
+        # expected format: 'domain = foo.bar'
+        if '=' in out:
+            return out.split('=', 1)[1].strip()
+        return out
+    except subprocess.CalledProcessError:
+        return None
 
-    while elapsed_time < timeout:
-        command = ["systemctl", "is-active", "--user", "lemonldapng-app"]
+
+def add_sample_apps():
+    ssodomain = get_ssodomain()
+    if not ssodomain:
+        print("SSODOMAIN is not set and could not retrieve domain; aborting.")
+        sys.exit(1)
+
+    # respect toggle unless forced
+    if os.getenv("SAMPLE_APPS_STATUS", "True") != "True" and not args.force:
+        print("SAMPLE_APPS_STATUS is not enabled. Use --force to override.")
+        sys.exit(0)
+
+    # skip creation if already present (first-boot instances)
+    if not args.force:
         try:
-            result = subprocess.run(command, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True)
-            if result.stdout.strip() == 'active':
-                break
+            run_command([
+                "podman", "exec", "lemonldapng-app",
+                "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+                "get", "applicationList/1sample"
+            ])
+            print("Sample applications already exist; skipping creation.")
+            return
         except subprocess.CalledProcessError:
-            print("Waiting for lemonldapng-app to become available...", file=sys.stderr)
-            time.sleep(interval)
-            elapsed_time += interval
-            if elapsed_time >= timeout:
-                print("Timeout is reached. lemonldapng-app is not available.", file=sys.stderr)
-                sys.exit(1)
+            pass  # not present, continue
 
-    # CDA status
-    try:
-        result = subprocess.run(
-            ["podman", "exec", "lemonldapng-app", "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "cda"],
-            stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True
-        )
-        config['cda_status'] = result.stdout.strip() == 'cda = 1'
-    except subprocess.CalledProcessError:
-        print("Error retrieving CDA status", file=sys.stderr)
+    print(f"Creating sample apps for {ssodomain}...")
+    # create category
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "addKey", "applicationList/1sample", "type", "category",
+        "applicationList/1sample", "catname", "Sample applications"
+    ])
+    # app1
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "addKey", "applicationList/1sample/test1", "type", "application"
+    ])
+    run_command([
+        "podman", "exec", "lemonldapng-app", "bash", "-c",
+        f"/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
+        f"applicationList/1sample/test1/options name 'Application Test 1' "
+        f"applicationList/1sample/test1/options description 'A simple application displaying authenticated user' "
+        f"applicationList/1sample/test1/options display auto "
+        f"applicationList/1sample/test1/options logo demo.png "
+        f"applicationList/1sample/test1/options uri 'http://test1.{ssodomain}/'"
+    ])
+    # app2
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "addKey", "applicationList/1sample/test2", "type", "application"
+    ])
+    run_command([
+        "podman", "exec", "lemonldapng-app", "bash", "-c",
+        f"/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
+        f"applicationList/1sample/test2/options name 'Application Test 2' "
+        f"applicationList/1sample/test2/options description 'The same simple application displaying authenticated user' "
+        f"applicationList/1sample/test2/options display auto "
+        f"applicationList/1sample/test2/options logo thumbnail.png "
+        f"applicationList/1sample/test2/options uri 'http://test2.{ssodomain}/'"
+    ])
+    print("Sample applications successfully created.")
 
-    # SAML status
-    try:
-        result = subprocess.run(
-            ["podman", "exec", "lemonldapng-app", "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "get", "issuerDBSAMLActivation"],
-            stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True, check=True
-        )
-        config['saml_status'] = result.stdout.strip() == 'issuerDBSAMLActivation = 1'
-    except subprocess.CalledProcessError:
-        print("Error retrieving SAML status", file=sys.stderr)
 
-    # Sample Apps status
-    try:
-        result = subprocess.run(
-            "podman exec lemonldapng-app /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 get 'applicationList/1sample/catname' | grep -q 'Sample applications' && echo 'true' || echo 'false'",
-            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
-        )
-        sample_apps_status = result.stdout.strip().lower() == 'true'
+def remove_sample_apps():
+    # respect toggle unless forced
+    if os.getenv("SAMPLE_APPS_STATUS", "True") == "True" and not args.force:
+        print("SAMPLE_APPS_STATUS is still enabled. Use --force to override removal.")
+        sys.exit(0)
 
-        # Only write "True" to env to preserve user intent
-        if sample_apps_status:
-            agent.set_env("SAMPLE_APPS_STATUS", "True")
+    print("Removing sample applications...")
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "delKey", "applicationList/1sample/test2"
+    ])
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "delKey", "applicationList/1sample/test1"
+    ])
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "delKey", "applicationList/1sample"
+    ])
+    print("Sample applications successfully removed.")
 
-        config['sample_apps_status'] = os.getenv("SAMPLE_APPS_STATUS", "True") == "True"
 
-    except subprocess.CalledProcessError:
-        print("Error retrieving Sample Apps status", file=sys.stderr)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Manage LemonLDAP::NG sample apps based on toggle."
+    )
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        choices=["add", "remove"],
+        default="add",
+        help="Action to perform (default: add)"
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Override SAMPLE_APPS_STATUS check"
+    )
+    args = parser.parse_args()
 
-# Output the configuration
-json.dump(config, fp=sys.stdout)
+    load_env()
+
+    if args.mode == "add":
+        add_sample_apps()
+    elif args.mode == "remove":
+        remove_sample_apps()
+
