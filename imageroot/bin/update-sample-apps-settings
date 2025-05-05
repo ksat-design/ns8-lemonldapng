@@ -30,7 +30,7 @@ def add_sample_apps():
         print("SAMPLE_APPS_STATUS is not enabled. Use --force to override.")
         sys.exit(0)
 
-    # Skip creation if apps already exist (first boot they are already present)
+    # Skip creation if apps already exist
     if not args.force:
         try:
             run_command([
@@ -110,7 +110,7 @@ def remove_sample_apps():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Manage LemonLDAP::NG sample apps based on toggle.")
-    parser.add_argument("mode", choices=["add", "remove"], help="Action to perform")
+    parser.add_argument("mode", nargs="?", choices=["add", "remove"], default="add", help="Action to perform (default: add)")
     parser.add_argument("--force", action="store_true", help="Override SAMPLE_APPS_STATUS check")
     args = parser.parse_args()
 
