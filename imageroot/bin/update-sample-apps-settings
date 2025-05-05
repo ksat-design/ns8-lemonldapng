@@ -1,51 +1,102 @@
 #!/usr/bin/env python3
 
-#
-# Copyright (C) 2025 Nethesis S.r.l.
-# SPDX-License-Identifier: GPL-3.0-or-later
-#
-
-import sys
 import os
 import subprocess
+import sys
+import argparse
 
-# Get the TRAEFIK_HOST environment variable or use a default value if it's not set
-traefik_host = os.getenv("TRAEFIK_HOST", "default-hostname.com")
+def load_env(env_file="/etc/lemonldap-ng/env"):
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                if '=' in line:
+                    key, val = line.strip().split('=', 1)
+                    os.environ.setdefault(key, val)
 
-# Debugging: Print the value of TRAEFIK_HOST
-print(f"Using TRAEFIK_HOST: {traefik_host}", file=sys.stderr)
+def run_command(cmd, shell=False):
+    result = subprocess.run(cmd, shell=shell, check=True, text=True)
+    return result
 
-# Check if sample apps are enabled or disabled
-sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "True") == "True"
+def add_sample_apps():
+    ssodomain = os.getenv("SSODOMAIN")
+    if not ssodomain:
+        print("SSODOMAIN is not set. Please export it or include it in the environment file.")
+        sys.exit(1)
 
-# Define the podman exec command for sample apps operations
-cli = [
-    "podman", "exec", "lemonldapng-app",
-    "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1"
-]
+    if os.getenv("SAMPLE_APPS_STATUS", "True") != "True" and not args.force:
+        print("SAMPLE_APPS_STATUS is not enabled. Use --force to override.")
+        sys.exit(0)
 
-if sample_apps_enabled:
-    # If enabled, check if apps already exist. If not, add them.
-    print("Sample apps are enabled. Ensuring apps are created...", file=sys.stderr)
-    subprocess.run(cli + [
+    print(f"Creating sample apps for {ssodomain}...")
+
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
         "addKey", "applicationList/1sample", "type", "category",
-        "applicationList/1sample", "catname", "Sample applications",
-        "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
-        "applicationList/1sample/test1", "options", "display", "auto",
-        "applicationList/1sample/test1", "options", "logo", "demo.png",
-        "applicationList/1sample/test1", "options", "name", "Application Test 1",
-        "applicationList/1sample/test1", "options", "uri", f"https://test1.{traefik_host}/",  # Using f-string
-        "applicationList/1sample/test2", "type", "application",
-        "applicationList/1sample/test2", "options", "description", "Another simple app",
-        "applicationList/1sample/test2", "options", "display", "auto",
-        "applicationList/1sample/test2", "options", "logo", "thumbnail.png",
-        "applicationList/1sample/test2", "options", "name", "Application Test 2",
-        "applicationList/1sample/test2", "options", "uri", f"https://test2.{traefik_host}/"  # Using f-string
+        "applicationList/1sample", "catname", "Sample applications"
     ])
-else:
-    # If disabled, remove the apps
-    print("Sample apps are disabled. Removing apps...", file=sys.stderr)
-    subprocess.run(cli + [
-        "delKey", "applicationList/1sample/test1",
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "addKey", "applicationList/1sample/test1", "type", "application"
+    ])
+    run_command([
+        "podman", "exec", "lemonldapng-app", "bash", "-c",
+        f"/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
+        f"applicationList/1sample/test1/options name 'Application Test 1' "
+        f"applicationList/1sample/test1/options description 'A simple application displaying authenticated user' "
+        f"applicationList/1sample/test1/options display auto "
+        f"applicationList/1sample/test1/options logo demo.png "
+        f"applicationList/1sample/test1/options uri 'http://test1.{ssodomain}/'"
+    ])
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "addKey", "applicationList/1sample/test2", "type", "application"
+    ])
+    run_command([
+        "podman", "exec", "lemonldapng-app", "bash", "-c",
+        f"/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
+        f"applicationList/1sample/test2/options name 'Application Test 2' "
+        f"applicationList/1sample/test2/options description 'The same simple application displaying authenticated user' "
+        f"applicationList/1sample/test2/options display auto "
+        f"applicationList/1sample/test2/options logo thumbnail.png "
+        f"applicationList/1sample/test2/options uri 'http://test2.{ssodomain}/'"
+    ])
+    print("Sample applications successfully created.")
+
+def remove_sample_apps():
+    if os.getenv("SAMPLE_APPS_STATUS", "True") == "True" and not args.force:
+        print("SAMPLE_APPS_STATUS is still enabled. Use --force to override removal.")
+        sys.exit(0)
+
+    print("Removing sample applications...")
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
         "delKey", "applicationList/1sample/test2"
     ])
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "delKey", "applicationList/1sample/test1"
+    ])
+    run_command([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+        "delKey", "applicationList/1sample"
+    ])
+    print("Sample applications successfully removed.")
+
+# Main logic
+parser = argparse.ArgumentParser(description="Manage LemonLDAP::NG sample apps based on toggle.")
+parser.add_argument("mode", choices=["add", "remove"], help="Action to perform")
+parser.add_argument("--force", action="store_true", help="Override SAMPLE_APPS_STATUS check")
+args = parser.parse_args()
+
+load_env()
+
+if args.mode == "add":
+    add_sample_apps()
+elif args.mode == "remove":
+    remove_sample_apps()
