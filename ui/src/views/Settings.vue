@@ -113,8 +113,7 @@
                       >{{ $t("settings.disabled") }}
                     </template>
                     <template slot="text-right"
-                      >{{ $t("settings.enabled") }}
-                    </template>
+                      >{{ $t("settings.enabled") }}</template>
                   </NsToggle>
                   <NsToggle
                     v-model="cda_status"
@@ -133,8 +132,7 @@
                       >{{ $t("settings.disabled") }}
                     </template>
                     <template slot="text-right"
-                      >{{ $t("settings.enabled") }}
-                    </template>
+                      >{{ $t("settings.enabled") }}</template>
                   </NsToggle>
                   <NsToggle
                     v-model="sample_apps_status"
@@ -153,8 +151,7 @@
                       >{{ $t("settings.disabled") }}
                     </template>
                     <template slot="text-right"
-                      >{{ $t("settings.enabled") }}
-                    </template>
+                      >{{ $t("settings.enabled") }}</template>
                   </NsToggle>
                 </template>
               </cv-accordion-item>
@@ -208,12 +205,11 @@ export default {
   },
   data() {
     return {
-      q: {
-        page: "settings",
-      },
+      q: { page: "settings" },
       saml_status: false,
       cda_status: false,
-      sample_apps_status: false,
+      // default to "on" for first-boot
+      sample_apps_status: true,
       urlCheckInterval: null,
       host: "",
       configured: false,
@@ -301,12 +297,15 @@ export default {
       this.configured = config.configured;
       this.saml_status = config.saml_status;
       this.cda_status = config.cda_status;
+      // ——— NEW: make sure the sample-apps toggle is on at first boot, else honor saved
+      if (!config.configured) {
+        this.sample_apps_status = true;
+      } else {
+        this.sample_apps_status = config.sample_apps_status;
+      }
       // force to reload value after dom update
       this.$nextTick(() => {
-        this.ldap_domain = config.ldap_domain;
-        if (this.ldap_domain == "") {
-          this.ldap_domain = "-";
-        }
+        this.ldap_domain = config.ldap_domain || "-";
       });
       this.ldap_domain_list = config.ldap_domain_list;
       this.loading.getConfiguration = false;
@@ -340,7 +339,6 @@ export default {
 
       for (const validationError of validationErrors) {
         const param = validationError.parameter;
-        // set i18n error message
         this.error[param] = this.$t("settings." + validationError.error);
 
         if (!focusAlreadySet) {
@@ -353,27 +351,22 @@ export default {
       this.error.test_imap = false;
       this.error.test_smtp = false;
       const isValidationOk = this.validateConfigureModule();
-      if (!isValidationOk) {
-        return;
-      }
+      if (!isValidationOk) return;
 
       this.loading.configureModule = true;
       const taskAction = "configure-module";
       const eventId = this.getUuid();
 
-      // register to task error
       this.core.$root.$once(
         `${taskAction}-aborted-${eventId}`,
         this.configureModuleAborted
       );
 
-      // register to task validation
       this.core.$root.$once(
         `${taskAction}-validation-failed-${eventId}`,
         this.configureModuleValidationFailed
       );
 
-      // register to task completion
       this.core.$root.$once(
         `${taskAction}-completed-${eventId}`,
         this.configureModuleCompleted
