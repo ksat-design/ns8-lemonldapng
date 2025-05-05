@@ -5,6 +5,7 @@ import subprocess
 import sys
 import argparse
 
+
 def load_env(env_file="/etc/lemonldap-ng/env"):
     if os.path.exists(env_file):
         with open(env_file) as f:
@@ -13,9 +14,10 @@ def load_env(env_file="/etc/lemonldap-ng/env"):
                     key, val = line.strip().split('=', 1)
                     os.environ.setdefault(key, val)
 
+
 def run_command(cmd, shell=False):
-    result = subprocess.run(cmd, shell=shell, check=True, text=True)
-    return result
+    return subprocess.run(cmd, shell=shell, check=True, text=True)
+
 
 def add_sample_apps():
     ssodomain = os.getenv("SSODOMAIN")
@@ -23,9 +25,24 @@ def add_sample_apps():
         print("SSODOMAIN is not set. Please export it or include it in the environment file.")
         sys.exit(1)
 
+    # Only proceed if toggle enabled or forced
     if os.getenv("SAMPLE_APPS_STATUS", "True") != "True" and not args.force:
         print("SAMPLE_APPS_STATUS is not enabled. Use --force to override.")
         sys.exit(0)
+
+    # Skip creation if apps already exist (first boot they are already present)
+    if not args.force:
+        try:
+            run_command([
+                "podman", "exec", "lemonldapng-app",
+                "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
+                "get", "applicationList/1sample"
+            ])
+            print("Sample applications already exist; skipping creation.")
+            return
+        except subprocess.CalledProcessError:
+            # not present, continue to create
+            pass
 
     print(f"Creating sample apps for {ssodomain}...")
 
@@ -65,7 +82,9 @@ def add_sample_apps():
     ])
     print("Sample applications successfully created.")
 
+
 def remove_sample_apps():
+    # Only proceed if toggle disabled or forced
     if os.getenv("SAMPLE_APPS_STATUS", "True") == "True" and not args.force:
         print("SAMPLE_APPS_STATUS is still enabled. Use --force to override removal.")
         sys.exit(0)
@@ -88,15 +107,16 @@ def remove_sample_apps():
     ])
     print("Sample applications successfully removed.")
 
-# Main logic
-parser = argparse.ArgumentParser(description="Manage LemonLDAP::NG sample apps based on toggle.")
-parser.add_argument("mode", choices=["add", "remove"], help="Action to perform")
-parser.add_argument("--force", action="store_true", help="Override SAMPLE_APPS_STATUS check")
-args = parser.parse_args()
 
-load_env()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Manage LemonLDAP::NG sample apps based on toggle.")
+    parser.add_argument("mode", choices=["add", "remove"], help="Action to perform")
+    parser.add_argument("--force", action="store_true", help="Override SAMPLE_APPS_STATUS check")
+    args = parser.parse_args()
 
-if args.mode == "add":
-    add_sample_apps()
-elif args.mode == "remove":
-    remove_sample_apps()
+    load_env()
+
+    if args.mode == "add":
+        add_sample_apps()
+    elif args.mode == "remove":
+        remove_sample_apps()
