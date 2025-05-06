@@ -1,122 +1,110 @@
-#!/usr/bin/env python3
+#!/usr/bin/env bash
+set -euo pipefail
 
-import os
-import subprocess
-import sys
-import argparse
+# ─── CONFIG ─────────────────────────────────────────────────────────────────────
+# Requires:
+#   SSODOMAIN  (e.g. sso2.ksatdesign.com.au)
+#
+# Usage:
+#   sample-apps.sh add|remove [--force]
 
+# ─── PARSE ARGS ─────────────────────────────────────────────────────────────────
+MODE=""
+FORCE=false
 
-def load_env(env_file="/etc/lemonldap-ng/env"):
-    if os.path.exists(env_file):
-        with open(env_file) as f:
-            for line in f:
-                if '=' in line:
-                    key, val = line.strip().split('=', 1)
-                    os.environ.setdefault(key, val)
+for arg; do
+  case "$arg" in
+    add|remove)
+      MODE="$arg"
+      ;;
+    --force)
+      FORCE=true
+      ;;
+    *)
+      echo "Unknown option: $arg"
+      echo "Usage: $0 add|remove [--force]"
+      exit 1
+      ;;
+  esac
+done
 
+if [[ -z "$MODE" ]]; then
+  echo "Error: Mode not specified. Use 'add' or 'remove'."
+  exit 1
+fi
 
-def run_command(cmd, shell=False):
-    return subprocess.run(cmd, shell=shell, check=True, text=True)
+: "${SSODOMAIN:?SSODOMAIN must be set in the environment before running this script}"
 
+# ─── HELPER: test if apps exist ──────────────────────────────────────────────────
+has_apps() {
+  # Returns 0 if test2 URI exists (i.e. apps are present), non-zero otherwise
+  podman exec lemonldapng-app \
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 get \
+      applicationList/1sample/test2/options/uri \
+    &>/dev/null
+}
 
-def add_sample_apps():
-    ssodomain = os.getenv("SSODOMAIN")
-    if not ssodomain:
-        print("SSODOMAIN is not set. Please export it or include it in the environment file.")
-        sys.exit(1)
+# ─── MODE: ADD ─────────────────────────────────────────────────────────────────
+if [[ "$MODE" == "add" ]]; then
+  if has_apps && [[ "$FORCE" == false ]]; then
+    echo "→ Sample apps already present; nothing to do."
+    exit 0
+  fi
 
-    # Only proceed if toggle enabled or forced
-    if os.getenv("SAMPLE_APPS_STATUS", "True") != "True" and not args.force:
-        print("SAMPLE_APPS_STATUS is not enabled. Use --force to override.")
-        sys.exit(0)
+  echo "▶ Creating 'Sample applications' for domain: $SSODOMAIN"
 
-    # Skip creation if apps already exist
-    if not args.force:
-        try:
-            run_command([
-                "podman", "exec", "lemonldapng-app",
-                "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
-                "get", "applicationList/1sample"
-            ])
-            print("Sample applications already exist; skipping creation.")
-            return
-        except subprocess.CalledProcessError:
-            # not present, continue to create
-            pass
+  # 1) Create category
+  podman exec lemonldapng-app bash -c '
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey \
+      applicationList/1sample type category \
+      applicationList/1sample catname "Sample applications"
+  '
 
-    print(f"Creating sample apps for {ssodomain}...")
+  # 2) Add test1
+  podman exec lemonldapng-app bash -c "
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey \
+      applicationList/1sample/test1 type application && \
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey \
+      applicationList/1sample/test1/options \
+        name 'Application Test 1' \
+        description 'A simple application displaying authenticated user' \
+        display auto \
+        logo demo.png \
+        uri 'http://test1.${SSODOMAIN}/'
+  "
 
-    run_command([
-        "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
-        "addKey", "applicationList/1sample", "type", "category",
-        "applicationList/1sample", "catname", "Sample applications"
-    ])
-    run_command([
-        "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
-        "addKey", "applicationList/1sample/test1", "type", "application"
-    ])
-    run_command([
-        "podman", "exec", "lemonldapng-app", "bash", "-c",
-        f"/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
-        f"applicationList/1sample/test1/options name 'Application Test 1' "
-        f"applicationList/1sample/test1/options description 'A simple application displaying authenticated user' "
-        f"applicationList/1sample/test1/options display auto "
-        f"applicationList/1sample/test1/options logo demo.png "
-        f"applicationList/1sample/test1/options uri 'http://test1.{ssodomain}/'"
-    ])
-    run_command([
-        "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
-        "addKey", "applicationList/1sample/test2", "type", "application"
-    ])
-    run_command([
-        "podman", "exec", "lemonldapng-app", "bash", "-c",
-        f"/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
-        f"applicationList/1sample/test2/options name 'Application Test 2' "
-        f"applicationList/1sample/test2/options description 'The same simple application displaying authenticated user' "
-        f"applicationList/1sample/test2/options display auto "
-        f"applicationList/1sample/test2/options logo thumbnail.png "
-        f"applicationList/1sample/test2/options uri 'http://test2.{ssodomain}/'"
-    ])
-    print("Sample applications successfully created.")
+  # 3) Add test2
+  podman exec lemonldapng-app bash -c "
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey \
+      applicationList/1sample/test2 type application && \
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey \
+      applicationList/1sample/test2/options \
+        name 'Application Test 2' \
+        description 'The same simple application displaying authenticated user' \
+        display auto \
+        logo thumbnail.png \
+        uri 'http://test2.${SSODOMAIN}/'
+  "
 
+  echo "✔ Sample applications created."
+  exit 0
+fi
 
-def remove_sample_apps():
-    # Only proceed if toggle disabled or forced
-    if os.getenv("SAMPLE_APPS_STATUS", "True") == "True" and not args.force:
-        print("SAMPLE_APPS_STATUS is still enabled. Use --force to override removal.")
-        sys.exit(0)
+# ─── MODE: REMOVE ───────────────────────────────────────────────────────────────
+if [[ "$MODE" == "remove" ]]; then
+  if ! has_apps && [[ "$FORCE" == false ]]; then
+    echo "→ Sample apps not present; nothing to do."
+    exit 0
+  fi
 
-    print("Removing sample applications...")
-    run_command([
-        "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
-        "delKey", "applicationList/1sample/test2"
-    ])
-    run_command([
-        "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
-        "delKey", "applicationList/1sample/test1"
-    ])
-    run_command([
-        "podman", "exec", "lemonldapng-app",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1",
-        "delKey", "applicationList/1sample"
-    ])
-    print("Sample applications successfully removed.")
+  echo "▶ Removing 'Sample applications'"
 
+  podman exec lemonldapng-app bash -c '
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 delKey applicationList/1sample/test2 && \
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 delKey applicationList/1sample/test1 && \
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 delKey applicationList/1sample
+  '
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Manage LemonLDAP::NG sample apps based on toggle.")
-    parser.add_argument("mode", nargs="?", choices=["add", "remove"], default="add", help="Action to perform (default: add)")
-    parser.add_argument("--force", action="store_true", help="Override SAMPLE_APPS_STATUS check")
-    args = parser.parse_args()
-
-    load_env()
-
-    if args.mode == "add":
-        add_sample_apps()
-    elif args.mode == "remove":
-        remove_sample_apps()
+  echo "✔ Sample applications removed."
+  exit 0
+fi
