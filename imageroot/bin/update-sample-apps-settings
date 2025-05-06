@@ -1,51 +1,110 @@
-#!/usr/bin/env python3
+#!/usr/bin/env bash
+set -euo pipefail
 
+# ─── CONFIG ─────────────────────────────────────────────────────────────────────
+# Requires:
+#   SSODOMAIN  (e.g. sso2.ksatdesign.com.au)
 #
-# Copyright (C) 2025 Nethesis S.r.l.
-# SPDX-License-Identifier: GPL-3.0-or-later
-#
+# Usage:
+#   sample-apps.sh add|remove [--force]
 
-import sys
-import os
-import subprocess
+# ─── PARSE ARGS ─────────────────────────────────────────────────────────────────
+MODE=""
+FORCE=false
 
-# Get the TRAEFIK_HOST environment variable or use a default value if it's not set
-traefik_host = os.getenv("TRAEFIK_HOST", "default-hostname.com")
+for arg; do
+  case "$arg" in
+    add|remove)
+      MODE="$arg"
+      ;;
+    --force)
+      FORCE=true
+      ;;
+    *)
+      echo "Unknown option: $arg"
+      echo "Usage: $0 add|remove [--force]"
+      exit 1
+      ;;
+  esac
+done
 
-# Debugging: Print the value of TRAEFIK_HOST
-print(f"Using TRAEFIK_HOST: {traefik_host}", file=sys.stderr)
+if [[ -z "$MODE" ]]; then
+  echo "Error: Mode not specified. Use 'add' or 'remove'."
+  exit 1
+fi
 
-# Check if sample apps are enabled or disabled
-sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "True") == "True"
+: "${SSODOMAIN:?SSODOMAIN must be set in the environment before running this script}"
 
-# Define the podman exec command for sample apps operations
-cli = [
-    "podman", "exec", "lemonldapng-app",
-    "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1"
-]
+# ─── HELPER: test if apps exist ──────────────────────────────────────────────────
+has_apps() {
+  # Returns 0 if test2 URI exists (i.e. apps are present), non-zero otherwise
+  podman exec lemonldapng-app \
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 get \
+      applicationList/1sample/test2/options/uri \
+    &>/dev/null
+}
 
-if sample_apps_enabled:
-    # If enabled, check if apps already exist. If not, add them.
-    print("Sample apps are enabled. Ensuring apps are created...", file=sys.stderr)
-    subprocess.run(cli + [
-        "addKey", "applicationList/1sample", "type", "category",
-        "applicationList/1sample", "catname", "Sample applications",
-        "applicationList/1sample/test1", "options", "description", "A simple application displaying authenticated user",
-        "applicationList/1sample/test1", "options", "display", "auto",
-        "applicationList/1sample/test1", "options", "logo", "demo.png",
-        "applicationList/1sample/test1", "options", "name", "Application Test 1",
-        "applicationList/1sample/test1", "options", "uri", f"https://test1.{traefik_host}/",  # Using f-string
-        "applicationList/1sample/test2", "type", "application",
-        "applicationList/1sample/test2", "options", "description", "Another simple app",
-        "applicationList/1sample/test2", "options", "display", "auto",
-        "applicationList/1sample/test2", "options", "logo", "thumbnail.png",
-        "applicationList/1sample/test2", "options", "name", "Application Test 2",
-        "applicationList/1sample/test2", "options", "uri", f"https://test2.{traefik_host}/"  # Using f-string
-    ])
-else:
-    # If disabled, remove the apps
-    print("Sample apps are disabled. Removing apps...", file=sys.stderr)
-    subprocess.run(cli + [
-        "delKey", "applicationList/1sample/test1",
-        "delKey", "applicationList/1sample/test2"
-    ])
+# ─── MODE: ADD ─────────────────────────────────────────────────────────────────
+if [[ "$MODE" == "add" ]]; then
+  if has_apps && [[ "$FORCE" == false ]]; then
+    echo "→ Sample apps already present; nothing to do."
+    exit 0
+  fi
+
+  echo "▶ Creating 'Sample applications' for domain: $SSODOMAIN"
+
+  # 1) Create category
+  podman exec lemonldapng-app bash -c '
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey \
+      applicationList/1sample type category \
+      applicationList/1sample catname "Sample applications"
+  '
+
+  # 2) Add test1
+  podman exec lemonldapng-app bash -c "
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey \
+      applicationList/1sample/test1 type application && \
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey \
+      applicationList/1sample/test1/options \
+        name 'Application Test 1' \
+        description 'A simple application displaying authenticated user' \
+        display auto \
+        logo demo.png \
+        uri 'http://test1.${SSODOMAIN}/'
+  "
+
+  # 3) Add test2
+  podman exec lemonldapng-app bash -c "
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey \
+      applicationList/1sample/test2 type application && \
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey \
+      applicationList/1sample/test2/options \
+        name 'Application Test 2' \
+        description 'The same simple application displaying authenticated user' \
+        display auto \
+        logo thumbnail.png \
+        uri 'http://test2.${SSODOMAIN}/'
+  "
+
+  echo "✔ Sample applications created."
+  exit 0
+fi
+
+# ─── MODE: REMOVE ───────────────────────────────────────────────────────────────
+if [[ "$MODE" == "remove" ]]; then
+  if ! has_apps && [[ "$FORCE" == false ]]; then
+    echo "→ Sample apps not present; nothing to do."
+    exit 0
+  fi
+
+  echo "▶ Removing 'Sample applications'"
+
+  podman exec lemonldapng-app bash -c '
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 delKey applicationList/1sample/test2 && \
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 delKey applicationList/1sample/test1 && \
+    /usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 delKey applicationList/1sample
+  '
+
+  echo "✔ Sample applications removed."
+  exit 0
+fi
