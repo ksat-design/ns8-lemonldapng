@@ -55,6 +55,11 @@
             "type": "boolean",
             "title": "SAML",
             "description": "True if the application is configured to use SAML"
+        },
+        "sample_apps_status": {
+            "type": "boolean",
+            "title": "Sample applications",
+            "description": "True if sample applications should be available"
         }
     }
 }
