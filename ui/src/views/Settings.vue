@@ -213,7 +213,7 @@ export default {
       },
       saml_status: false,
       cda_status: false,
-      sample_apps_status: true, // Added toggle state
+      sample_apps_status: true,
       urlCheckInterval: null,
       host: "",
       configured: false,
@@ -298,7 +298,10 @@ export default {
       this.configured = config.configured;
       this.saml_status = config.saml_status;
       this.cda_status = config.cda_status;
-      this.sample_apps_status = config.sample_apps_status; // assign config value
+      this.sample_apps_status =
+        config.sample_apps_status !== undefined
+          ? config.sample_apps_status
+          : this.sample_apps_status;
       this.$nextTick(() => {
         this.ldap_domain = config.ldap_domain;
         if (this.ldap_domain == "") {
