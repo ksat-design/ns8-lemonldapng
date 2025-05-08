@@ -299,7 +299,7 @@ export default {
       this.saml_status = config.saml_status;
       this.cda_status = config.cda_status;
       this.sample_apps_status =
-        config.sample_apps_status !== undefined
+        config.sample_apps_status != null
           ? config.sample_apps_status
           : this.sample_apps_status;
       this.$nextTick(() => {
