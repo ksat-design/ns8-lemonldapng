@@ -213,7 +213,7 @@ export default {
       },
       saml_status: false,
       cda_status: false,
-      sample_apps_status: false, // Added toggle state
+      sample_apps_status: true, // Added toggle state
       urlCheckInterval: null,
       host: "",
       configured: false,
