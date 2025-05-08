@@ -22,8 +22,14 @@ def sample_apps_exist():
         return False
 
 def create_sample_apps():
-    """Manually create the sample apps."""
+    """Create the sample apps using correct bash logic."""
+    ssodomain = os.getenv("SSODOMAIN")
+    if not ssodomain:
+        raise EnvironmentError("SSODOMAIN environment variable is not set.")
+
     print("Creating sample apps...")
+
+    # Category and test1 definition
     subprocess.run([
         "podman", "exec", "lemonldapng-app",
         "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "addKey",
@@ -37,43 +43,44 @@ def create_sample_apps():
         "applicationList/1sample/test1", "type", "application"
     ], check=True)
 
+    # Test1 options
     subprocess.run([
         "podman", "exec", "lemonldapng-app", "bash", "-c",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
-        "applicationList/1sample/test1/options name 'Application Test 1' "
-        "applicationList/1sample/test1/options description 'A simple application displaying authenticated user' "
-        "applicationList/1sample/test1/options display auto "
-        "applicationList/1sample/test1/options logo demo.png "
-        f"applicationList/1sample/test1/options uri 'https://test1.{os.getenv('SSODOMAIN')}/'"
+        f"/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
+        f"applicationList/1sample/test1/options name 'Application Test 1' "
+        f"applicationList/1sample/test1/options description 'A simple application displaying authenticated user' "
+        f"applicationList/1sample/test1/options display auto "
+        f"applicationList/1sample/test1/options logo demo.png "
+        f"applicationList/1sample/test1/options uri 'http://test1.{ssodomain}/'"
     ], check=True)
 
+    # Test2 options
     subprocess.run([
         "podman", "exec", "lemonldapng-app", "bash", "-c",
-        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
-        "applicationList/1sample/test2 'type' 'application' "
-        "applicationList/1sample/test2/options name 'Application Test 2' "
-        "applicationList/1sample/test2/options description 'Another example app' "
-        "applicationList/1sample/test2/options display auto "
-        "applicationList/1sample/test2/options logo demo.png "
-        f"applicationList/1sample/test2/options uri 'https://test2.{os.getenv('SSODOMAIN')}/'"
+        f"/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
+        f"applicationList/1sample/test2/options name 'Application Test 2' "
+        f"applicationList/1sample/test2/options description 'The same simple application displaying authenticated user' "
+        f"applicationList/1sample/test2/options display auto "
+        f"applicationList/1sample/test2/options logo thumbnail.png "
+        f"applicationList/1sample/test2/options uri 'http://test2.{ssodomain}/'"
     ], check=True)
 
 def delete_sample_apps():
     """Delete the sample apps and category."""
     print("Removing sample apps...")
     commands = [
-        ["applicationList", "1sample", "test2"],
-        ["applicationList", "1sample", "test1"],
-        ["applicationList", "1sample"]
+        ["applicationList/1sample/test2"],
+        ["applicationList/1sample/test1"],
+        ["applicationList/1sample"]
     ]
     for path in commands:
         subprocess.run([
             "podman", "exec", "lemonldapng-app",
-            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "delKey", *path
+            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "delKey", path[0]
         ], check=False)
 
-# Read the toggle state
-sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "True").lower() == "true"
+# Determine what to do based on env and app existence
+sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "true").lower() == "true"
 apps_exist = sample_apps_exist()
 
 if sample_apps_enabled:
