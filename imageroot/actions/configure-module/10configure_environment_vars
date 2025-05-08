@@ -37,3 +37,10 @@ if issuer_dbsaml_activation:
     agent.set_env("SAML_STATUS", "True")
 else:
     agent.set_env("SAML_STATUS", "False")
+
+# Setup Sample Apps toggle
+sample_apps = data.get("sample_apps_status", True)
+if sample_apps:
+    agent.set_env("SAMPLE_APPS_STATUS", "True")
+else:
+    agent.set_env("SAMPLE_APPS_STATUS", "False")
