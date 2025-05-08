@@ -136,6 +136,27 @@
                       >{{ $t("settings.enabled") }}
                     </template>
                   </NsToggle>
+                  <!-- Sample Apps Toggle (currently no action) -->
+                  <NsToggle
+                    v-model="sampleAppsStatus"
+                    ref="sampleAppsStatus"
+                    :label="$t('settings.sample_apps_status')"
+                    :form-item="true"
+                    value="toggleValue"
+                    :disabled="
+                      loading.getConfiguration || loading.configureModule
+                    "
+                  >
+                    <template slot="tooltip">
+                      <span>{{ $t("settings.sample_apps_status_tooltip") }}</span>
+                    </template>
+                    <template slot="text-left"
+                      >{{ $t("settings.disabled") }}
+                    </template>
+                    <template slot="text-right"
+                      >{{ $t("settings.enabled") }}
+                    </template>
+                  </NsToggle>
                 </template>
               </cv-accordion-item>
             </cv-accordion>
@@ -193,6 +214,7 @@ export default {
       },
       saml_status: false,
       cda_status: false,
+      sampleAppsStatus: false,  // Added sample apps toggle model
       urlCheckInterval: null,
       host: "",
       configured: false,
@@ -267,20 +289,15 @@ export default {
         return;
       }
     },
-    getConfigurationAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.error.getConfiguration = this.$t("error.generic_error");
-      this.loading.getConfiguration = false;
-    },
     getConfigurationCompleted(taskContext, taskResult) {
       const config = taskResult.output;
       this.host = config.host;
       this.isLetsEncryptEnabled = config.lets_encrypt;
-      this.isHttpToHttpsEnabled = config.http2https;
+      this.isHttpToHttpsEnabled = config.https2http;
       this.configured = config.configured;
       this.saml_status = config.saml_status;
       this.cda_status = config.cda_status;
-      // force to reload value after dom update
+      // currently sample apps toggle is UI-only, no backend value yet
       this.$nextTick(() => {
         this.ldap_domain = config.ldap_domain;
         if (this.ldap_domain == "") {
@@ -291,35 +308,12 @@ export default {
       this.loading.getConfiguration = false;
       this.focusElement("host");
     },
-    validateConfigureModule() {
-      this.clearErrors(this);
-
-      let isValidationOk = true;
-      if (!this.host) {
-        this.error.host = "common.required";
-
-        if (isValidationOk) {
-          this.focusElement("host");
-        }
-        isValidationOk = false;
-      }
-      if (!this.ldap_domain) {
-        this.error.ldap_domain = "common.required";
-
-        if (isValidationOk) {
-          this.focusElement("ldap_domain");
-        }
-        isValidationOk = false;
-      }
-      return isValidationOk;
-    },
     configureModuleValidationFailed(validationErrors) {
       this.loading.configureModule = false;
       let focusAlreadySet = false;
 
       for (const validationError of validationErrors) {
         const param = validationError.parameter;
-        // set i18n error message
         this.error[param] = this.$t("settings." + validationError.error);
 
         if (!focusAlreadySet) {
@@ -329,8 +323,6 @@ export default {
       }
     },
     async configureModule() {
-      this.error.test_imap = false;
-      this.error.test_smtp = false;
       const isValidationOk = this.validateConfigureModule();
       if (!isValidationOk) {
         return;
@@ -340,62 +332,39 @@ export default {
       const taskAction = "configure-module";
       const eventId = this.getUuid();
 
-      // register to task error
+      // register to task events
       this.core.$root.$once(
         `${taskAction}-aborted-${eventId}`,
         this.configureModuleAborted
       );
-
-      // register to task validation
       this.core.$root.$once(
         `${taskAction}-validation-failed-${eventId}`,
         this.configureModuleValidationFailed
       );
-
-      // register to task completion
       this.core.$root.$once(
         `${taskAction}-completed-${eventId}`,
         this.configureModuleCompleted
       );
-      const res = await to(
-        this.createModuleTaskForApp(this.instanceName, {
-          action: taskAction,
-          data: {
-            host: this.host,
-            lets_encrypt: this.isLetsEncryptEnabled,
-            http2https: this.isHttpToHttpsEnabled,
-            ldap_domain: this.ldap_domain == "-" ? "" : this.ldap_domain,
-            saml_status: this.saml_status,
-            cda_status: this.cda_status,
-          },
-          extra: {
-            title: this.$t("settings.instance_configuration", {
-              instance: this.instanceName,
-            }),
-            description: this.$t("settings.configuring"),
-            eventId,
-          },
-        })
-      );
-      const err = res[0];
 
-      if (err) {
-        console.error(`error creating task ${taskAction}`, err);
-        this.error.configureModule = this.getErrorMessage(err);
-        this.loading.configureModule = false;
-        return;
-      }
-    },
-    configureModuleAborted(taskResult, taskContext) {
-      console.error(`${taskContext.action} aborted`, taskResult);
-      this.error.configureModule = this.$t("error.generic_error");
-      this.loading.configureModule = false;
-    },
-    configureModuleCompleted() {
-      this.loading.configureModule = false;
-
-      // reload configuration
-      this.getConfiguration();
+      await this.createModuleTaskForApp(this.instanceName, {
+        action: taskAction,
+        data: {
+          host: this.host,
+          lets_encrypt: this.isLetsEncryptEnabled,
+          http2https: this.isHttpToHttpsEnabled,
+          ldap_domain: this.ldap_domain == "-" ? "" : this.ldap_domain,
+          saml_status: this.saml_status,
+          cda_status: this.cda_status,
+          // sampleAppsStatus is UI-only for now
+        },
+        extra: {
+          title: this.$t("settings.instance_configuration", {
+            instance: this.instanceName,
+          }),
+          description: this.$t("settings.configuring"),
+          eventId,
+        },
+      });
     },
   },
 };
