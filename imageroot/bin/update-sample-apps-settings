@@ -4,33 +4,85 @@ import os
 import subprocess
 import sys
 
-# Check if sample apps are enabled
+def sample_apps_exist():
+    """Check if the URI for Sample App 2 exists."""
+    try:
+        result = subprocess.run(
+            [
+                "podman", "exec", "lemonldapng-app",
+                "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli",
+                "-yes", "1", "get",
+                "applicationList/1sample/test2/options/uri"
+            ],
+            capture_output=True, text=True, check=True
+        )
+        uri = result.stdout.strip().lower()
+        return "uri =" in uri or uri.startswith("http")
+    except subprocess.CalledProcessError:
+        return False
+
+def create_sample_apps():
+    """Manually create the sample apps."""
+    print("Creating sample apps...")
+    subprocess.run([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "addKey",
+        "applicationList/1sample", "type", "category",
+        "applicationList/1sample", "catname", "Sample applications"
+    ], check=True)
+
+    subprocess.run([
+        "podman", "exec", "lemonldapng-app",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "addKey",
+        "applicationList/1sample/test1", "type", "application"
+    ], check=True)
+
+    subprocess.run([
+        "podman", "exec", "lemonldapng-app", "bash", "-c",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
+        "applicationList/1sample/test1/options name 'Application Test 1' "
+        "applicationList/1sample/test1/options description 'A simple application displaying authenticated user' "
+        "applicationList/1sample/test1/options display auto "
+        "applicationList/1sample/test1/options logo demo.png "
+        f"applicationList/1sample/test1/options uri 'https://test1.{os.getenv('SSODOMAIN')}/'"
+    ], check=True)
+
+    subprocess.run([
+        "podman", "exec", "lemonldapng-app", "bash", "-c",
+        "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli -yes 1 addKey "
+        "applicationList/1sample/test2 'type' 'application' "
+        "applicationList/1sample/test2/options name 'Application Test 2' "
+        "applicationList/1sample/test2/options description 'Another example app' "
+        "applicationList/1sample/test2/options display auto "
+        "applicationList/1sample/test2/options logo demo.png "
+        f"applicationList/1sample/test2/options uri 'https://test2.{os.getenv('SSODOMAIN')}/'"
+    ], check=True)
+
+def delete_sample_apps():
+    """Delete the sample apps and category."""
+    print("Removing sample apps...")
+    commands = [
+        ["applicationList", "1sample", "test2"],
+        ["applicationList", "1sample", "test1"],
+        ["applicationList", "1sample"]
+    ]
+    for path in commands:
+        subprocess.run([
+            "podman", "exec", "lemonldapng-app",
+            "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "delKey", *path
+        ], check=False)
+
+# Read the toggle state
 sample_apps_enabled = os.getenv("SAMPLE_APPS_STATUS", "True").lower() == "true"
+apps_exist = sample_apps_exist()
 
 if sample_apps_enabled:
-    print("Sample apps are enabled — skipping deletion.")
-    sys.exit(0)
-
-# Define deletion commands as a list of subcommands
-delete_commands = [
-    ["applicationList/1sample/test1"],
-    ["applicationList/1sample/test2"],
-    ["applicationList/1sample"]
-]
-
-# Base command
-base_command = [
-    "podman", "exec", "lemonldapng-app",
-    "/usr/share/lemonldap-ng/bin/lemonldap-ng-cli", "-yes", "1", "delKey"
-]
-
-# Execute each delete command
-for path in delete_commands:
-    full_command = base_command + path
-    try:
-        print(f"Deleting: {path[0]}")
-        result = subprocess.run(full_command, check=True, capture_output=True, text=True)
-        print(result.stdout.strip())
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to delete {path[0]}:", file=sys.stderr)
-        print(e.stderr.strip(), file=sys.stderr)
+    if not apps_exist:
+        create_sample_apps()
+    else:
+        print("Sample apps already exist — nothing to do.")
+else:
+    if apps_exist:
+        delete_sample_apps()
+    else:
+        print("Sample apps already removed — nothing to do.")
