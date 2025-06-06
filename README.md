@@ -252,5 +252,5 @@ podman exec lemonldapng-app env
 ## 🧪 Testing
 
 ```bash
-./test-module.sh <NODE_ADDR> ghcr.io/nethserver/lemonldapng:latest
+./test-module.sh <NODE_ADDR> ghcr.io/ksat-design/lemonldapng:latest
 ```
