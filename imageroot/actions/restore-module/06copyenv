@@ -14,11 +14,12 @@ request = json.load(sys.stdin)
 original_environment = request['environment']
 
 for evar in [
-        "TRAEFIK_HOST",
-        "TRAEFIK_HTTP2HTTPS",
-        "TRAEFIK_LETS_ENCRYPT",
-        "LDAP_DOMAIN",
-    ]:
-    agent.set_env(evar, original_environment[evar])
-
-agent.dump_env()
+    "TRAEFIK_HOST",
+    "TRAEFIK_HTTP2HTTPS",
+    "TRAEFIK_LETS_ENCRYPT",
+    "LDAP_DOMAIN",
+    "CDA_STATUS",
+    "SAML_STATUS",
+]:
+    if evar in original_environment:
+        agent.set_env(evar, original_environment[evar])
